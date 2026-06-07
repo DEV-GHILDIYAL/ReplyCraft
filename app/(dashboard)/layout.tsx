@@ -127,7 +127,7 @@ export default function DashboardLayout({
             </svg>
           </div>
           <p className="text-sm font-semibold text-rc-muted animate-pulse">
-            Loading ReplyCraft...
+            Loading ReplyDesk...
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function DashboardLayout({
               </svg>
             </div>
             <span className="text-lg font-bold text-rc-text">
-              Reply<span className="text-rc-accent">Craft</span>
+              Reply<span className="text-rc-accent">Desk</span>
             </span>
           </div>
         </header>
@@ -189,7 +189,7 @@ export default function DashboardLayout({
             </svg>
           </div>
           <span className="text-lg font-bold text-rc-text">
-            Reply<span className="text-rc-accent">Craft</span>
+            Reply<span className="text-rc-accent">Desk</span>
           </span>
         </div>
 
@@ -239,7 +239,7 @@ export default function DashboardLayout({
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10">
                     <Sparkles className="h-5 w-5 text-rc-accent" />
                   </div>
-                  <span className="text-lg font-bold text-rc-text">ReplyCraft</span>
+                  <span className="text-lg font-bold text-rc-text">ReplyDesk</span>
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}

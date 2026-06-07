@@ -47,7 +47,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* ReplyCraft custom colors */
+  /* ReplyDesk custom colors */
   --color-rc-bg: #0a0f1e;
   --color-rc-card: #111827;
   --color-rc-card-hover: #1a2235;

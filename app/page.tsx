@@ -1,4 +1,5 @@
 import Navbar from "@/components/landing/Navbar";
+import BetaBanner from "@/components/landing/BetaBanner";
 import Hero from "@/components/landing/Hero";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Platforms from "@/components/landing/Platforms";
@@ -9,6 +10,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-rc-bg">
       <Navbar />
+      <BetaBanner />
       <main>
         <Hero />
         <HowItWorks />

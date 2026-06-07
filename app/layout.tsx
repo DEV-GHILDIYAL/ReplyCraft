@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ReplyCraft — AI Review Response & Reputation Manager",
+  title: "ReplyDesk — AI Review Response & Reputation Manager",
   description:
     "Turn every review into a growth opportunity. AI drafts perfect responses in seconds. You approve in one click. Manage reviews from Google, Yelp, Facebook, and more.",
   keywords: [
@@ -22,18 +22,18 @@ export const metadata: Metadata = {
     "reputation management",
     "Google reviews",
     "business reviews",
-    "ReplyCraft",
+    "ReplyDesk",
   ],
   openGraph: {
-    title: "ReplyCraft — AI Review Response & Reputation Manager",
+    title: "ReplyDesk — AI Review Response & Reputation Manager",
     description:
       "AI drafts perfect responses to your business reviews. You approve in one click.",
     type: "website",
-    url: "https://replycraft.io",
+    url: "https://replydesk.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReplyCraft — AI Review Response & Reputation Manager",
+    title: "ReplyDesk — AI Review Response & Reputation Manager",
     description:
       "AI drafts perfect responses to your business reviews. You approve in one click.",
   },

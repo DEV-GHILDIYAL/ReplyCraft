@@ -1,5 +1,5 @@
 -- ============================================
--- ReplyCraft — Database Schema
+-- ReplyDesk — Database Schema
 -- ============================================
 -- Run this in your Supabase SQL Editor to create all tables
 

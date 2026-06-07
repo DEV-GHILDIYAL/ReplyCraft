@@ -47,7 +47,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span className="text-lg font-bold text-rc-text">
-                Reply<span className="text-rc-accent">Craft</span>
+                Reply<span className="text-rc-accent">Desk</span>
               </span>
             </Link>
             <p className="text-sm text-rc-muted leading-relaxed max-w-xs">
@@ -80,7 +80,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-rc-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-rc-muted">
-            &copy; {new Date().getFullYear()} ReplyCraft. All rights reserved.
+            &copy; {new Date().getFullYear()} ReplyDesk. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             {/* Social icons */}

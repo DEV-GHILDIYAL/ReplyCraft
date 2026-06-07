@@ -28,7 +28,7 @@ export default function Navbar() {
               </svg>
             </div>
             <span className="text-lg font-bold text-rc-text">
-              Reply<span className="text-rc-accent">Craft</span>
+              Reply<span className="text-rc-accent">Desk</span>
             </span>
           </Link>
 

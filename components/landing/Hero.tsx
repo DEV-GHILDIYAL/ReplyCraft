@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-12">
       {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Gradient orbs */}
@@ -23,17 +23,6 @@ export default function Hero() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full border border-rc-accent/20 bg-rc-accent/5 animate-fade-in">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rc-accent opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rc-accent" />
-          </span>
-          <span className="text-xs font-medium text-rc-accent tracking-wide">
-            Now in Beta — Free for 14 Days
-          </span>
-        </div>
-
         {/* Headline */}
         <h1
           className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-slide-up"
@@ -119,7 +108,7 @@ export default function Hero() {
               </div>
               <div className="flex-1 flex justify-center">
                 <div className="px-4 py-1 rounded-md bg-rc-bg/50 text-xs text-rc-muted">
-                  app.replycraft.io/dashboard
+                  app.replydesk.io/dashboard
                 </div>
               </div>
             </div>

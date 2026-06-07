@@ -108,7 +108,7 @@ export default function SettingsPage() {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_your-key-id",
           amount: data.amount,
           currency: "INR",
-          name: "ReplyCraft",
+          name: "ReplyDesk",
           description: `${selectedPlan.toUpperCase()} Subscription Plan`,
           order_id: orderId,
           handler: async function (response: any) {

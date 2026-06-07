@@ -223,11 +223,11 @@ export async function GET(request: Request) {
 
       if (ownerEmail) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const emailSubject = `ReplyCraft: ${unprocessed.length} new reviews need your attention`;
+        const emailSubject = `ReplyDesk: ${unprocessed.length} new reviews need your attention`;
         const emailHtml = `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #0a0f1e; color: #f1f5f9; border-radius: 12px; border: 1px solid #1e293b;">
             <div style="text-align: center; margin-bottom: 24px;">
-              <h1 style="color: #00d4aa; margin: 0; font-size: 24px;">ReplyCraft</h1>
+              <h1 style="color: #00d4aa; margin: 0; font-size: 24px;">ReplyDesk</h1>
               <p style="color: #94a3b8; font-size: 14px; margin: 4px 0 0 0;">Automated Sync Alert</p>
             </div>
             
@@ -263,14 +263,14 @@ export async function GET(request: Request) {
 
             <hr style="border: 0; border-top: 1px solid #1e293b; margin-bottom: 16px;"/>
             <p style="font-size: 11px; text-align: center; color: #94a3b8; margin: 0;">
-              This is an automated sync system alert from ReplyCraft. You can manage notifications under Settings.
+              This is an automated sync system alert from ReplyDesk. You can manage notifications under Settings.
             </p>
           </div>
         `;
 
         if (resend) {
           await resend.emails.send({
-            from: "ReplyCraft Alerts <onboarding@resend.dev>",
+            from: "ReplyDesk Alerts <onboarding@resend.dev>",
             to: ownerEmail,
             subject: emailSubject,
             html: emailHtml,

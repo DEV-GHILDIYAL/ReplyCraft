@@ -1,5 +1,5 @@
 // ============================================
-// ReplyCraft — Type Definitions
+// ReplyDesk — Type Definitions
 // ============================================
 
 // --- Enum Types ---
