@@ -112,19 +112,7 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-rc-bg flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rc-accent/10 border border-rc-accent/20 animate-pulse-glow">
-            <svg
-              className="h-7 w-7 text-rc-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
+            <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-7 w-7" />
           </div>
           <p className="text-sm font-semibold text-rc-muted animate-pulse">
             Loading ReplyDesk...
@@ -143,19 +131,7 @@ export default function DashboardLayout({
         <header className="h-16 border-b border-rc-border bg-rc-card/50 backdrop-blur-sm flex items-center px-6">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10 border border-rc-accent/20">
-              <svg
-                className="h-5 w-5 text-rc-accent"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
+              <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-5 w-5" />
             </div>
             <span className="text-lg font-bold text-rc-text">
               Reply<span className="text-rc-accent">Desk</span>
@@ -174,19 +150,7 @@ export default function DashboardLayout({
         {/* Brand */}
         <div className="h-16 flex items-center px-6 border-b border-rc-border gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10 border border-rc-accent/20">
-            <svg
-              className="h-5 w-5 text-rc-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
+            <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-5 w-5" />
           </div>
           <span className="text-lg font-bold text-rc-text">
             Reply<span className="text-rc-accent">Desk</span>
@@ -236,8 +200,8 @@ export default function DashboardLayout({
               {/* Brand and Close */}
               <div className="flex items-center justify-between pb-6 border-b border-rc-border">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10">
-                    <Sparkles className="h-5 w-5 text-rc-accent" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10 border border-rc-accent/20">
+                    <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-5 w-5" />
                   </div>
                   <span className="text-lg font-bold text-rc-text">ReplyDesk</span>
                 </div>

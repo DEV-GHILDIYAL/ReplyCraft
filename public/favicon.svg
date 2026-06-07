@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Background -->
+  <rect width="100" height="100" rx="20" fill="#0a0f1e"/>
+  <!-- Speech Bubble -->
+  <path d="M 22,50 C 22,34.5 34.5,22 50,22 C 65.5,22 78,34.5 78,50 C 78,65.5 65.5,78 50,78 C 43.8,78 38.3,75.6 34,71.9 L 19,78 L 23.3,63.6 C 22.5,59.3 22,54.7 22,50 Z" fill="none" stroke="#00ff88" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Checkmark -->
+  <path d="M 42,50 L 48,56 L 59,45" fill="none" stroke="#00ff88" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -13,9 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ReplyDesk — AI Review Response & Reputation Manager",
-  description:
-    "Turn every review into a growth opportunity. AI drafts perfect responses in seconds. You approve in one click. Manage reviews from Google, Yelp, Facebook, and more.",
+  title: "ReplyDesk",
+  description: "Turn every review into a growth opportunity",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
   keywords: [
     "review management",
     "AI response",
@@ -25,17 +30,17 @@ export const metadata: Metadata = {
     "ReplyDesk",
   ],
   openGraph: {
-    title: "ReplyDesk — AI Review Response & Reputation Manager",
+    title: "ReplyDesk",
     description:
-      "AI drafts perfect responses to your business reviews. You approve in one click.",
+      "Turn every review into a growth opportunity. AI drafts perfect responses in seconds.",
     type: "website",
     url: "https://replydesk.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReplyDesk — AI Review Response & Reputation Manager",
+    title: "ReplyDesk",
     description:
-      "AI drafts perfect responses to your business reviews. You approve in one click.",
+      "Turn every review into a growth opportunity. AI drafts perfect responses in seconds.",
   },
 };
 
@@ -51,6 +56,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark`}
     >
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body className="min-h-screen bg-rc-bg text-rc-text antialiased">
         {children}
         <Toaster
