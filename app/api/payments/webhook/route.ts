@@ -1,0 +1,129 @@
+import { createAdminClient } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
+import crypto from "crypto";
+
+export async function POST(request: Request) {
+  try {
+    const rawBody = await request.text();
+    const headers = request.headers;
+    const signature = headers.get("x-razorpay-signature");
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    const isPlaceholderSecret =
+      !secret || secret === "your-razorpay-secret" || secret.trim() === "";
+
+    let body: any = {};
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    // 1. Signature Verification
+    if (!isPlaceholderSecret && signature) {
+      const expectedSignature = crypto
+        .createHmac("sha256", secret!)
+        .update(rawBody)
+        .digest("hex");
+
+      if (expectedSignature !== signature) {
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 400 }
+        );
+      }
+    } else {
+      console.warn(
+        "[Razorpay Webhook] Running in SIMULATION mode because RAZORPAY_WEBHOOK_SECRET is not configured."
+      );
+    }
+
+    // 2. Extract order info
+    // Webhook events could be: order.paid, payment.captured, or manually simulated posts
+    let orderId = "";
+    let paymentId = "";
+    let status = "failed";
+
+    if (body.event === "order.paid" || body.event === "payment.captured") {
+      const paymentEntity = body.payload?.payment?.entity;
+      orderId = paymentEntity?.order_id || "";
+      paymentId = paymentEntity?.id || "";
+      status = "paid";
+    } else if (body.razorpay_order_id) {
+      // Allow direct client verification payload for easy testing
+      orderId = body.razorpay_order_id;
+      paymentId = body.razorpay_payment_id || "";
+      status = "paid";
+    } else {
+      // If event is not paid/captured, just acknowledge it
+      return NextResponse.json({ received: true });
+    }
+
+    if (!orderId) {
+      return NextResponse.json(
+        { error: "No order ID found in payload" },
+        { status: 400 }
+      );
+    }
+
+    // Use admin client to bypass RLS since webhooks are server-to-server
+    const supabase = await createAdminClient();
+
+    // Find the payment record
+    const { data: paymentRecord, error: fetchError } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("razorpay_order_id", orderId)
+      .maybeSingle();
+
+    if (fetchError || !paymentRecord) {
+      return NextResponse.json(
+        { error: `Payment record not found for order: ${orderId}` },
+        { status: 404 }
+      );
+    }
+
+    // If already paid, do not repeat process
+    if (paymentRecord.status === "paid") {
+      return NextResponse.json({ success: true, message: "Already processed" });
+    }
+
+    // Update payment record
+    const { error: updatePayError } = await supabase
+      .from("payments")
+      .update({
+        razorpay_payment_id: paymentId,
+        status: status,
+      })
+      .eq("id", paymentRecord.id);
+
+    if (updatePayError) throw updatePayError;
+
+    if (status === "paid") {
+      // Upgrade subscription plan in businesses table
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30); // 30-day billing cycle
+
+      const { error: updateBizError } = await supabase
+        .from("businesses")
+        .update({
+          plan: paymentRecord.plan,
+          plan_expires_at: expiryDate.toISOString(),
+        })
+        .eq("id", paymentRecord.business_id);
+
+      if (updateBizError) throw updateBizError;
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully processed order ${orderId} as ${status}`,
+    });
+  } catch (err: any) {
+    console.error("Webhook processing error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to process webhook" },
+      { status: 500 }
+    );
+  }
+}
