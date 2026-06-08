@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-12">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-12 w-full">
       {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Gradient orbs */}
@@ -22,7 +22,7 @@ export default function Hero() {
         />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+      <div className="relative z-10 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 text-center">
         {/* Headline */}
         <h1
           className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-slide-up"
@@ -113,7 +113,7 @@ export default function Hero() {
               </div>
             </div>
             {/* Mock dashboard content */}
-            <div className="p-4 sm:p-6">
+            <div className="p-3 sm:p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
                 {[
                   { label: "Total Reviews", value: "1,247", change: "+12%" },
@@ -123,7 +123,7 @@ export default function Hero() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-xl bg-rc-bg/60 border border-rc-border p-2 sm:p-3"
+                    className="rounded-xl bg-rc-bg/60 border border-rc-border p-1.5 sm:p-3 min-w-0"
                   >
                     <p className="text-[9px] sm:text-[10px] text-rc-muted uppercase tracking-wider truncate">
                       {stat.label}
@@ -155,7 +155,7 @@ export default function Hero() {
                 ].map((review) => (
                   <div
                     key={review.name}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-lg bg-rc-bg/40 border border-rc-border p-3"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-lg bg-rc-bg/40 border border-rc-border p-3 w-full min-w-0"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-full bg-rc-accent/10 flex items-center justify-center text-xs font-bold text-rc-accent shrink-0">

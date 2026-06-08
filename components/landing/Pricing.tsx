@@ -76,7 +76,7 @@ export default function Pricing() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative flex flex-col rounded-2xl border p-8 transition-all duration-300 hover:-translate-y-1 ${
+              className={`relative flex flex-col rounded-2xl border p-5 sm:p-8 transition-all duration-300 hover:-translate-y-1 ${
                 plan.popular
                   ? "border-rc-accent/40 bg-rc-card shadow-xl shadow-rc-accent/5 animate-pulse-glow"
                   : "border-rc-border bg-rc-card/50 hover:border-rc-border-light hover:shadow-lg hover:shadow-black/20"
