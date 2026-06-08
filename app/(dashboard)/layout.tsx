@@ -128,7 +128,7 @@ export default function DashboardLayout({
   if (isOnboarding) {
     return (
       <div className="min-h-screen bg-rc-bg text-rc-text">
-        <header className="h-16 border-b border-rc-border bg-rc-card/50 backdrop-blur-sm flex items-center px-6">
+        <header className="h-16 border-b border-rc-border bg-rc-card/50 backdrop-blur-sm flex items-center px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rc-accent/10 border border-rc-accent/20">
               <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-5 w-5" />
@@ -256,7 +256,7 @@ export default function DashboardLayout({
       {/* Main Column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="h-16 border-b border-rc-border bg-rc-card/30 backdrop-blur-md flex items-center justify-between px-6 z-10">
+        <header className="h-16 border-b border-rc-border bg-rc-card/30 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 z-10">
           {/* Left info / Mobile toggle */}
           <div className="flex items-center gap-4">
             <button

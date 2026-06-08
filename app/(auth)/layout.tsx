@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-rc-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-rc-bg flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full bg-rc-accent/5 blur-[120px]" />
@@ -36,7 +36,7 @@ export default function AuthLayout({
 
       {/* Auth Card */}
       <div className="relative z-10 w-full max-w-md">
-        <div className="rounded-2xl border border-rc-border bg-rc-card/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/20">
+        <div className="rounded-2xl border border-rc-border bg-rc-card/80 backdrop-blur-xl p-5 sm:p-8 shadow-2xl shadow-black/20">
           {children}
         </div>
       </div>

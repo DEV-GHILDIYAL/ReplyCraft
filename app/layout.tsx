@@ -60,7 +60,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
-      <body className="min-h-screen bg-rc-bg text-rc-text antialiased">
+      <body className="min-h-screen bg-rc-bg text-rc-text antialiased overflow-x-hidden">
         {children}
         <Toaster
           position="top-right"

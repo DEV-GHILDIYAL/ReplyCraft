@@ -25,11 +25,11 @@ export default function Hero() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
         {/* Headline */}
         <h1
-          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-slide-up"
+          className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-slide-up"
           style={{ animationDelay: "0.1s", opacity: 0 }}
         >
-          Turn Every Review Into a
-          <br />
+          Turn Every Review Into a{" "}
+          <br className="hidden sm:block" />
           <span className="text-gradient">Growth Opportunity</span>
         </h1>
 
@@ -44,12 +44,12 @@ export default function Hero() {
 
         {/* CTA Buttons */}
         <div
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up"
+          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-xs sm:max-w-none mx-auto animate-slide-up"
           style={{ animationDelay: "0.4s", opacity: 0 }}
         >
           <Link
             href="/register"
-            className="group relative inline-flex items-center justify-center px-8 py-3.5 font-semibold text-rc-bg bg-rc-accent rounded-xl hover:bg-rc-accent-hover transition-all duration-300 shadow-lg shadow-rc-accent/20 hover:shadow-rc-accent/30 hover:-translate-y-0.5 w-full sm:w-auto"
+            className="group relative flex sm:inline-flex items-center justify-center px-8 py-3.5 font-semibold text-rc-bg bg-rc-accent rounded-xl hover:bg-rc-accent-hover transition-all duration-300 shadow-lg shadow-rc-accent/20 hover:shadow-rc-accent/30 hover:-translate-y-0.5 w-full sm:w-auto"
           >
             Start Free Trial
             <svg
@@ -68,7 +68,7 @@ export default function Hero() {
           </Link>
           <a
             href="#how-it-works"
-            className="inline-flex items-center justify-center px-8 py-3.5 font-semibold text-rc-text border border-rc-border rounded-xl hover:bg-rc-card hover:border-rc-border-light transition-all duration-300 w-full sm:w-auto"
+            className="flex sm:inline-flex items-center justify-center px-8 py-3.5 font-semibold text-rc-text border border-rc-border rounded-xl hover:bg-rc-card hover:border-rc-border-light transition-all duration-300 w-full sm:w-auto"
           >
             <svg
               className="mr-2 h-5 w-5 text-rc-muted"
@@ -95,7 +95,7 @@ export default function Hero() {
 
         {/* Dashboard Mockup */}
         <div
-          className="mt-16 lg:mt-20 mx-auto max-w-4xl animate-slide-up"
+          className="mt-16 lg:mt-20 mx-auto max-w-4xl w-full animate-slide-up"
           style={{ animationDelay: "0.6s", opacity: 0 }}
         >
           <div className="relative rounded-2xl border border-rc-border bg-rc-card/80 backdrop-blur-sm p-1 shadow-2xl shadow-black/30">
@@ -113,8 +113,8 @@ export default function Hero() {
               </div>
             </div>
             {/* Mock dashboard content */}
-            <div className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
                 {[
                   { label: "Total Reviews", value: "1,247", change: "+12%" },
                   { label: "Avg Rating", value: "4.6", change: "+0.3" },
@@ -123,12 +123,12 @@ export default function Hero() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-xl bg-rc-bg/60 border border-rc-border p-3"
+                    className="rounded-xl bg-rc-bg/60 border border-rc-border p-2 sm:p-3"
                   >
-                    <p className="text-[10px] text-rc-muted uppercase tracking-wider">
+                    <p className="text-[9px] sm:text-[10px] text-rc-muted uppercase tracking-wider truncate">
                       {stat.label}
                     </p>
-                    <p className="text-xl font-bold text-rc-text mt-1">
+                    <p className="text-lg sm:text-xl font-bold text-rc-text mt-1">
                       {stat.value}
                     </p>
                     <span className="text-xs text-rc-positive">
@@ -155,41 +155,43 @@ export default function Hero() {
                 ].map((review) => (
                   <div
                     key={review.name}
-                    className="flex items-center gap-4 rounded-lg bg-rc-bg/40 border border-rc-border p-3"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-lg bg-rc-bg/40 border border-rc-border p-3"
                   >
-                    <div className="h-8 w-8 rounded-full bg-rc-accent/10 flex items-center justify-center text-xs font-bold text-rc-accent shrink-0">
-                      {review.name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-rc-text">
-                          {review.name}
-                        </span>
-                        <span className="text-xs text-rc-muted">
-                          {review.platform}
-                        </span>
-                        <div className="flex gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <svg
-                              key={i}
-                              className={`h-3 w-3 ${
-                                i < review.rating
-                                  ? "text-yellow-400"
-                                  : "text-rc-border"
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </div>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-rc-accent/10 flex items-center justify-center text-xs font-bold text-rc-accent shrink-0">
+                        {review.name[0]}
                       </div>
-                      <p className="text-xs text-rc-muted truncate mt-0.5">
-                        {review.text}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="text-xs font-medium text-rc-text">
+                            {review.name}
+                          </span>
+                          <span className="text-[10px] text-rc-muted">
+                            {review.platform}
+                          </span>
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <svg
+                                key={i}
+                                className={`h-3 w-3 ${
+                                  i < review.rating
+                                    ? "text-yellow-400"
+                                    : "text-rc-border"
+                                }`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-rc-muted truncate mt-0.5">
+                          {review.text}
+                        </p>
+                      </div>
                     </div>
-                    <button className="shrink-0 text-[10px] font-medium bg-rc-accent/10 text-rc-accent px-3 py-1.5 rounded-md hover:bg-rc-accent/20 transition-colors">
+                    <button className="self-end sm:self-auto shrink-0 text-[10px] font-medium bg-rc-accent/10 text-rc-accent px-3 py-1.5 rounded-md hover:bg-rc-accent/20 transition-colors">
                       AI Draft
                     </button>
                   </div>

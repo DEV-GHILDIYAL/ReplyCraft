@@ -52,7 +52,7 @@ export default function Pricing() {
   ];
 
   return (
-    <section id="pricing" className="relative py-24 lg:py-32">
+    <section id="pricing" className="relative py-24 lg:py-32 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-rc-border to-transparent" />
         {/* Subtle accent glow behind pricing */}
