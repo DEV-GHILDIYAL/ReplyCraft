@@ -29,18 +29,46 @@ export default function DashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
-  const handleSyncMock = async () => {
+  const handleSyncReviews = async () => {
     setSyncing(true);
     const toastId = toast.loading("Syncing reviews from connected platforms...");
     try {
-      const response = await fetch("/api/reviews/mock", {
-        method: "POST",
-      });
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.error || "Sync failed");
+      const googlePlaceId = data?.business?.google_place_id;
 
-      toast.success("Reviews synced successfully!", { id: toastId });
-      mutate(); // Refresh dashboard data
+      if (googlePlaceId) {
+        // Fetch real reviews from Google Places API
+        const response = await fetch("/api/platforms/google/fetch-reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ placeId: googlePlaceId }),
+        });
+        const resData = await response.json();
+        if (!response.ok) throw new Error(resData.error || "Sync failed");
+
+        const count = resData.importedCount || 0;
+        toast.success(
+          count > 0
+            ? `Successfully synced ${count} new review${count > 1 ? "s" : ""}!`
+            : "Reviews are already up to date!",
+          { id: toastId }
+        );
+        mutate(); // Refresh dashboard data
+      } else {
+        // Fallback to mock review functionality in development only
+        const isDev = process.env.NODE_ENV === "development";
+        if (isDev) {
+          const response = await fetch("/api/reviews/mock", {
+            method: "POST",
+          });
+          const resData = await response.json();
+          if (!response.ok) throw new Error(resData.error || "Sync failed");
+
+          toast.success("Reviews synced successfully (simulation mode)!", { id: toastId });
+          mutate(); // Refresh dashboard data
+        } else {
+          toast.error("No connected Google Business Profile found. Connect one on the Platforms page to sync reviews.", { id: toastId });
+        }
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to sync reviews", { id: toastId });
     } finally {
@@ -152,7 +180,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <button
-          onClick={handleSyncMock}
+          onClick={handleSyncReviews}
           disabled={syncing}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15 disabled:opacity-60"
         >
@@ -342,7 +370,7 @@ export default function DashboardPage() {
               <div className="p-12 text-center rounded-xl border border-dashed border-rc-border bg-rc-card/10">
                 <p className="text-sm text-rc-muted mb-4">No reviews found. Seed some to get started!</p>
                 <button
-                  onClick={handleSyncMock}
+                  onClick={handleSyncReviews}
                   className="px-5 py-2.5 rounded-xl bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent transition-all"
                 >
                   Seed Mock Reviews

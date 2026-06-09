@@ -33,6 +33,7 @@ CREATE TABLE platforms (
   )),
   platform_url TEXT,
   platform_id TEXT,
+  place_id TEXT,
   api_key TEXT,
   last_synced_at TIMESTAMPTZ,
   is_active BOOLEAN NOT NULL DEFAULT true,

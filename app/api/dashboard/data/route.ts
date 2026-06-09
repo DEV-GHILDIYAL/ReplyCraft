@@ -29,6 +29,16 @@ export async function GET() {
 
     const businessId = business.id;
 
+    // Fetch connected Google platform place_id if any
+    const { data: googlePlatform } = await supabase
+      .from("platforms")
+      .select("place_id")
+      .eq("business_id", businessId)
+      .eq("platform", "google")
+      .eq("is_active", true)
+      .maybeSingle();
+
+
     // Fetch all reviews for this business
     const { data: reviews, error: reviewsError } = await supabase
       .from("reviews")
@@ -110,6 +120,7 @@ export async function GET() {
       business: {
         plan: business.plan,
         auto_reply_enabled: business.auto_reply_enabled,
+        google_place_id: googlePlatform?.place_id || null,
       },
     });
   } catch (err: any) {

@@ -43,6 +43,81 @@ export async function GET() {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get business profile
+    const { data: business, error: bizError } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (bizError || !business) {
+      return NextResponse.json({ error: "Business profile not found" }, { status: 404 });
+    }
+
+    const { placeId, name, address } = await request.json();
+
+    if (!placeId) {
+      return NextResponse.json({ error: "placeId is required" }, { status: 400 });
+    }
+
+    // Check if google platform is already connected for this business
+    const { data: existingPlatform } = await supabase
+      .from("platforms")
+      .select("id")
+      .eq("business_id", business.id)
+      .eq("platform", "google")
+      .maybeSingle();
+
+    const platformPayload = {
+      business_id: business.id,
+      platform: "google",
+      is_active: true,
+      platform_id: placeId,
+      place_id: placeId,
+      platform_url: `https://places.google.com/${placeId}`,
+      last_synced_at: new Date().toISOString(),
+    };
+
+    let saveError;
+    if (existingPlatform) {
+      const { error } = await supabase
+        .from("platforms")
+        .update(platformPayload)
+        .eq("id", existingPlatform.id);
+      saveError = error;
+    } else {
+      const { error } = await supabase
+        .from("platforms")
+        .insert(platformPayload);
+      saveError = error;
+    }
+
+    if (saveError) {
+      throw saveError;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Google connect POST error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to connect business profile" },
+      { status: 500 }
+    );
+  }
+}
+
 function requestUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
