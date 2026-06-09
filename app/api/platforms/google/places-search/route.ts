@@ -5,21 +5,21 @@ const MOCK_PLACES = [
   {
     id: "places/mock_place_1",
     displayName: { text: "Bite & Brew Cafe (Mumbai)", languageCode: "en" },
-    formattedAddress: "Plot 12, Link Road, Andheri West, Mumbai, MH 400053",
+    formattedAddress: "Plot 12, Link Road, Andheri West, Mumbai, India",
     rating: 4.6,
     userRatingCount: 247,
   },
   {
     id: "places/mock_place_2",
     displayName: { text: "The Daily Brew (Bandra)", languageCode: "en" },
-    formattedAddress: "Avenue 3, Bandra West, Mumbai, MH 400050",
+    formattedAddress: "Avenue 3, Bandra West, Mumbai, India",
     rating: 4.2,
     userRatingCount: 89,
   },
   {
     id: "places/mock_place_3",
     displayName: { text: "Bite & Brew Bistro (Colaba)", languageCode: "en" },
-    formattedAddress: "Regal Cinema Bldg, Colaba, Mumbai, MH 400001",
+    formattedAddress: "Regal Cinema Bldg, Colaba, Mumbai, India",
     rating: 4.8,
     userRatingCount: 412,
   }

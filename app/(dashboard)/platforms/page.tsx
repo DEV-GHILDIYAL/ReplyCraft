@@ -85,11 +85,24 @@ export default function PlatformsPage() {
   // Google Places search / connect states
   const [googleSearchActive, setGoogleSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchCity, setSearchCity] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<any | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [isMockMode, setIsMockMode] = useState(false);
+
+  const parseCityCountry = (address: string) => {
+    if (!address) return "";
+    const parts = address.split(",").map((p) => p.trim());
+    if (parts.length >= 2) {
+      const country = parts[parts.length - 1];
+      const cityAndState = parts[parts.length - 2];
+      const cityClean = cityAndState.replace(/\b\d+\b/g, "").replace(/\s+/g, " ").trim();
+      return `${cityClean}, ${country}`;
+    }
+    return address;
+  };
 
   const loadPlatforms = async () => {
     const { data: biz } = await supabase
@@ -176,8 +189,12 @@ export default function PlatformsPage() {
     setSearching(true);
     setSelectedPlace(null);
     try {
+      const fullQuery = searchCity.trim()
+        ? `${searchQuery.trim()} ${searchCity.trim()}`
+        : searchQuery.trim();
+
       const response = await fetch(
-        `/api/platforms/google/places-search?query=${encodeURIComponent(searchQuery)}`
+        `/api/platforms/google/places-search?query=${encodeURIComponent(fullQuery)}`
       );
       const resData = await response.json();
       if (!response.ok) throw new Error(resData.error || "Search failed");
@@ -228,6 +245,7 @@ export default function PlatformsPage() {
       // Reset search states
       setGoogleSearchActive(false);
       setSearchQuery("");
+      setSearchCity("");
       setSearchResults([]);
       setSelectedPlace(null);
 
@@ -243,6 +261,7 @@ export default function PlatformsPage() {
   const resetGoogleSearch = () => {
     setGoogleSearchActive(false);
     setSearchQuery("");
+    setSearchCity("");
     setSearchResults([]);
     setSelectedPlace(null);
   };
@@ -307,44 +326,69 @@ export default function PlatformsPage() {
                       )}
 
                       {/* Step 1: Search Form */}
-                      <form onSubmit={handleGoogleSearch} className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-rc-muted" />
+                      <form onSubmit={handleGoogleSearch} className="space-y-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-rc-muted" />
+                            <input
+                              type="text"
+                              placeholder="Business Name"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full bg-rc-bg border border-rc-border rounded-lg pl-8 pr-2 py-2 text-xs text-rc-text placeholder:text-rc-muted focus:outline-none focus:border-rc-accent text-ellipsis"
+                            />
+                          </div>
                           <input
                             type="text"
-                            placeholder="Search your business on Google"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-rc-bg border border-rc-border rounded-lg pl-8 pr-2 py-2 text-xs text-rc-text placeholder:text-rc-muted focus:outline-none focus:border-rc-accent text-ellipsis"
+                            placeholder="City"
+                            value={searchCity}
+                            onChange={(e) => setSearchCity(e.target.value)}
+                            className="w-full bg-rc-bg border border-rc-border rounded-lg px-3 py-2 text-xs text-rc-text placeholder:text-rc-muted focus:outline-none focus:border-rc-accent text-ellipsis"
                           />
                         </div>
                         <button
                           type="submit"
                           disabled={searching || !searchQuery.trim()}
-                          className="px-3.5 py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 shrink-0 cursor-pointer"
+                          className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center shrink-0"
                         >
-                          {searching ? "Searching..." : "Search"}
+                          {searching ? "Searching..." : "Search Google Places"}
                         </button>
                       </form>
 
                       {/* Search Results Dropdown */}
                       {searchResults.length > 0 && !selectedPlace && (
-                        <div className="max-h-40 overflow-y-auto border border-rc-border bg-rc-bg rounded-lg divide-y divide-rc-border/60">
-                          {searchResults.map((place) => (
+                        <div className="space-y-2">
+                          <div className="max-h-40 overflow-y-auto border border-rc-border bg-rc-bg rounded-lg divide-y divide-rc-border/60">
+                            {searchResults.map((place) => (
+                              <button
+                                key={place.id}
+                                type="button"
+                                onClick={() => setSelectedPlace(place)}
+                                className="w-full text-left p-2.5 hover:bg-rc-card/50 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                              >
+                                <div className="flex justify-between items-start w-full gap-2">
+                                  <span className="text-xs font-semibold text-rc-text truncate flex-1">
+                                    {place.displayName?.text || place.displayName}
+                                  </span>
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-rc-border/60 rounded text-rc-accent shrink-0 font-medium">
+                                    {parseCityCountry(place.formattedAddress)}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-rc-muted truncate leading-relaxed">
+                                  {place.formattedAddress}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="text-center pt-2 border-t border-rc-border/30 mt-2 animate-fade-in">
                             <button
-                              key={place.id}
                               type="button"
-                              onClick={() => setSelectedPlace(place)}
-                              className="w-full text-left p-2.5 hover:bg-rc-card/50 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                              onClick={() => router.push("/reviews?addManual=true")}
+                              className="text-[11px] text-rc-accent hover:underline font-semibold cursor-pointer"
                             >
-                              <span className="text-xs font-semibold text-rc-text">
-                                {place.displayName?.text || place.displayName}
-                              </span>
-                              <span className="text-[10px] text-rc-muted truncate">
-                                {place.formattedAddress}
-                              </span>
+                              Can't find your business? Add reviews manually
                             </button>
-                          ))}
+                          </div>
                         </div>
                       )}
 

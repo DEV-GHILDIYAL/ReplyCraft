@@ -20,6 +20,7 @@ CREATE TABLE businesses (
   plan_expires_at TIMESTAMPTZ,
   razorpay_customer_id TEXT,
   auto_reply_enabled BOOLEAN NOT NULL DEFAULT false,
+  onboarding_data JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

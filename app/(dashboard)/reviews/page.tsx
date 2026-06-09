@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { toast } from "react-hot-toast";
 import {
@@ -221,6 +222,13 @@ export default function ReviewsPage() {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("addManual") === "true") {
+      setIsAddModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Manual review form states
   const [manualName, setManualName] = useState("");
