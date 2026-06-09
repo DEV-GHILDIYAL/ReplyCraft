@@ -23,10 +23,18 @@ export default function Hero() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 text-center">
+        {/* Social Proof Badge */}
+        <div
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rc-accent/10 border border-rc-accent/25 text-xs font-semibold text-rc-accent mb-6 animate-slide-up"
+          style={{ animationDelay: "0.05s", opacity: 0 }}
+        >
+          <span>Join 100+ businesses managing reviews smarter</span>
+        </div>
+
         {/* Headline */}
         <h1
           className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-slide-up"
-          style={{ animationDelay: "0.1s", opacity: 0 }}
+          style={{ animationDelay: "0.15s", opacity: 0 }}
         >
           Turn Every Review Into a{" "}
           <br className="hidden sm:block" />
@@ -116,10 +124,10 @@ export default function Hero() {
             <div className="p-3 sm:p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
                 {[
-                  { label: "Total Reviews", value: "1,247", change: "+12%" },
-                  { label: "Avg Rating", value: "4.6", change: "+0.3" },
-                  { label: "Pending", value: "23", change: "-8" },
-                  { label: "Response Rate", value: "94%", change: "+5%" },
+                  { label: "Total Reviews", value: "—", change: "" },
+                  { label: "Avg Rating", value: "—", change: "" },
+                  { label: "Pending", value: "—", change: "" },
+                  { label: "Response Rate", value: "—", change: "" },
                 ].map((stat) => (
                   <div
                     key={stat.label}

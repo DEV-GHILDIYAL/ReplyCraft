@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { BusinessCategory } from "@/types";
 import { createClient } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
+import { Lock } from "lucide-react";
 
 const categories: { value: BusinessCategory; label: string; icon: string }[] = [
   { value: "restaurant", label: "Restaurant", icon: "🍽️" },
@@ -86,6 +87,10 @@ export default function OnboardingPage() {
   const totalSteps = 3;
 
   function togglePlatform(id: string) {
+    if (!connectedPlatforms.includes(id) && connectedPlatforms.length >= 1) {
+      toast.error("Free plan is limited to 1 platform connection during setup. Connect others later!");
+      return;
+    }
     setConnectedPlatforms((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
@@ -239,48 +244,61 @@ export default function OnboardingPage() {
             </div>
 
             <div className="space-y-3 mb-8">
-              {platformOptions.map((platform) => (
-                <button
-                  key={platform.id}
-                  onClick={() => togglePlatform(platform.id)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 ${
-                    connectedPlatforms.includes(platform.id)
-                      ? "border-rc-accent bg-rc-accent/5"
-                      : "border-rc-border bg-rc-card/50 hover:border-rc-border-light hover:bg-rc-card"
-                  }`}
-                >
-                  {platform.icon}
-                  <span className="flex-1 text-left">
-                    <span className="text-sm font-medium text-rc-text block">
-                      {platform.name}
-                    </span>
-                    <span className="text-xs text-rc-muted">
-                      {connectedPlatforms.includes(platform.id)
-                        ? "Selected"
-                        : "Click to select"}
-                    </span>
-                  </span>
-                  <div
-                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                      connectedPlatforms.includes(platform.id)
-                        ? "border-rc-accent bg-rc-accent"
-                        : "border-rc-border"
+              {platformOptions.map((platform) => {
+                const isSelected = connectedPlatforms.includes(platform.id);
+                const isLocked = !isSelected && connectedPlatforms.length >= 1;
+
+                return (
+                  <button
+                    key={platform.id}
+                    onClick={() => togglePlatform(platform.id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 ${
+                      isSelected
+                        ? "border-rc-accent bg-rc-accent/5"
+                        : isLocked
+                        ? "border-rc-border/40 bg-rc-card/25 opacity-70 cursor-not-allowed"
+                        : "border-rc-border bg-rc-card/50 hover:border-rc-border-light hover:bg-rc-card"
                     }`}
                   >
-                    {connectedPlatforms.includes(platform.id) && (
-                      <svg
-                        className="h-3 w-3 text-rc-bg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={3}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                </button>
-              ))}
+                    {platform.icon}
+                    <span className="flex-1 text-left">
+                      <span className="text-sm font-medium text-rc-text block">
+                        {platform.name}
+                      </span>
+                      <span className="text-xs text-rc-muted">
+                        {isSelected
+                          ? "Selected"
+                          : isLocked
+                          ? "Locked (Limit 1)"
+                          : "Click to select"}
+                      </span>
+                    </span>
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSelected
+                          ? "border-rc-accent bg-rc-accent"
+                          : isLocked
+                          ? "border-rc-border/40 bg-transparent"
+                          : "border-rc-border"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <svg
+                          className="h-3 w-3 text-rc-bg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : isLocked ? (
+                        <Lock className="h-3 w-3 text-rc-muted" />
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex gap-3">

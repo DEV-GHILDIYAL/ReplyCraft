@@ -205,15 +205,29 @@ export async function GET(request: Request) {
           }
         }
 
+        const isAutoReply = biz.auto_reply_enabled && (biz.plan === "growth" || biz.plan === "scale");
+
         // Insert draft
         await supabase.from("response_drafts").insert({
           review_id: review.id,
           business_id: biz.id,
           draft_text: draftText,
           ai_model: groq ? "llama-3.1-8b-instant" : "cron-fallback",
-          status: "pending",
+          status: isAutoReply ? "published" : "pending",
           tone: defaultTone,
         });
+
+        // If Auto-Reply, update the review record directly to responded
+        if (isAutoReply) {
+          await supabase
+            .from("reviews")
+            .update({
+              is_responded: true,
+              response_text: draftText,
+              response_published_at: new Date().toISOString(),
+            })
+            .eq("id", review.id);
+        }
       }
 
       // 3. Email Notification to Business Owner

@@ -4,7 +4,7 @@
 
 // --- Enum Types ---
 
-export type PlanType = "free" | "pro" | "business";
+export type PlanType = "free" | "starter" | "growth" | "scale";
 
 export type Sentiment = "positive" | "neutral" | "negative";
 
@@ -134,44 +134,64 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     priceDisplay: "₹0",
     features: [
       "1 location",
-      "2 platforms",
+      "1 platform connection",
       "50 AI responses/mo",
       "Basic dashboard",
     ],
     limits: {
       locations: 1,
-      platforms: 2,
+      platforms: 1,
       responsesPerMonth: 50,
     },
   },
-  pro: {
-    name: "Pro",
+  starter: {
+    name: "Starter",
+    price: 49900,
+    priceDisplay: "₹499",
+    features: [
+      "1 location",
+      "1 platform connection",
+      "100 AI responses/mo",
+      "Manual review input",
+      "Email support",
+    ],
+    limits: {
+      locations: 1,
+      platforms: 1,
+      responsesPerMonth: 100,
+    },
+  },
+  growth: {
+    name: "Growth",
     price: 99900,
     priceDisplay: "₹999",
     features: [
       "3 locations",
-      "All platforms",
+      "3 platform connections",
       "500 AI responses/mo",
-      "Sentiment analytics",
+      "Manual review input",
+      "Auto-publish AI replies",
       "Priority support",
     ],
     limits: {
       locations: 3,
-      platforms: "unlimited",
+      platforms: 3,
       responsesPerMonth: 500,
     },
   },
-  business: {
-    name: "Business",
+  scale: {
+    name: "Scale",
     price: 249900,
     priceDisplay: "₹2,499",
     features: [
-      "10 locations",
-      "All platforms",
+      "Unlimited locations",
+      "Unlimited platform connections",
       "Unlimited AI responses",
+      "Manual review input",
+      "Auto-publish AI replies",
       "Sentiment analytics",
       "Dedicated support",
-      "API access",
+      "White label option",
     ],
     limits: {
       locations: 10,

@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [plan, setPlan] = useState("");
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +45,7 @@ export default function SettingsPage() {
       setCategory(biz.category || "");
       setPlan(biz.plan);
       setPlanExpiresAt(biz.plan_expires_at);
+      setAutoReplyEnabled(biz.auto_reply_enabled || false);
     }
     setLoading(false);
   };
@@ -58,7 +60,11 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from("businesses")
-        .update({ name: businessName, category: category || null })
+        .update({ 
+          name: businessName, 
+          category: category || null,
+          auto_reply_enabled: autoReplyEnabled
+        })
         .eq("plan", plan); // matches current plan to verify row
 
       if (error) throw error;
@@ -70,7 +76,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpgrade = async (selectedPlan: "pro" | "business") => {
+  const handleUpgrade = async (selectedPlan: "starter" | "growth" | "scale") => {
     setUpgradingPlan(selectedPlan);
     const toastId = toast.loading(`Initiating order for ${selectedPlan} plan...`);
     try {
@@ -230,10 +236,60 @@ export default function SettingsPage() {
                 </select>
               </div>
 
+              {/* Auto-Reply Mode Toggle */}
+              <div>
+                <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-2.5">
+                  Auto-Reply Mode
+                </label>
+                <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+                  autoReplyEnabled
+                    ? "border-rc-accent/40 bg-rc-accent/5"
+                    : "border-rc-border bg-rc-bg/40"
+                }`}>
+                  <div className="space-y-1 pr-4">
+                    <span className="text-sm font-semibold text-rc-text block">
+                      Auto-Publish Replies
+                    </span>
+                    <span className="text-xs text-rc-muted block leading-relaxed">
+                      Automatically publish AI responses immediately upon review synchronization, bypassing the approval queue.
+                    </span>
+                  </div>
+
+                  <div className="relative flex items-center shrink-0">
+                    {(plan === "growth" || plan === "scale") ? (
+                      <button
+                        type="button"
+                        onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
+                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-none ${
+                          autoReplyEnabled ? "bg-rc-accent" : "bg-rc-border"
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded-full bg-rc-bg absolute top-1 transition-all ${
+                          autoReplyEnabled ? "left-6" : "left-1"
+                        }`} />
+                      </button>
+                    ) : (
+                      <div className="flex flex-col items-end gap-1.5">
+                        <button
+                          type="button"
+                          disabled
+                          className="w-11 h-6 rounded-full bg-rc-border opacity-50 cursor-not-allowed relative"
+                        >
+                          <span className="w-4 h-4 rounded-full bg-rc-bg absolute top-1 left-1" />
+                        </button>
+                        <span className="text-[10px] text-yellow-500 font-semibold bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                          Upgrade to Growth
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 cursor-pointer"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>
@@ -259,7 +315,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <span className="px-3 py-1 rounded-full bg-rc-accent-soft text-rc-accent border border-rc-accent/30 text-xs font-semibold">
-                    {plan === "free" ? "50 replies/mo" : plan === "pro" ? "500 replies/mo" : "Unlimited"}
+                    {plan === "free" ? "50 replies/mo" : plan === "starter" ? "100 replies/mo" : plan === "growth" ? "500 replies/mo" : "Unlimited"}
                   </span>
                 </div>
               </div>
@@ -313,9 +369,9 @@ export default function SettingsPage() {
                             </span>
                           ) : (
                             <button
-                              onClick={() => handleUpgrade(key as "pro" | "business")}
+                              onClick={() => handleUpgrade(key as "starter" | "growth" | "scale")}
                               disabled={upgradingPlan !== null}
-                              className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50"
+                              className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer"
                             >
                               {upgradingPlan === key ? "Processing..." : `Upgrade to ${item.name}`}
                             </button>

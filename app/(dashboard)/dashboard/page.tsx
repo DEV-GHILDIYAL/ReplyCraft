@@ -136,9 +136,17 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-rc-text tracking-tight">
-            Dashboard Overview
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-bold text-rc-text tracking-tight">
+              Dashboard Overview
+            </h1>
+            {data?.business?.auto_reply_enabled && (data?.business?.plan === "growth" || data?.business?.plan === "scale") && (
+              <span className="px-2.5 py-1 rounded-full bg-rc-accent/10 text-rc-accent border border-rc-accent/25 text-[10px] font-bold flex items-center gap-1.5 animate-pulse-glow shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-rc-accent animate-ping" />
+                Auto-Reply Active
+              </span>
+            )}
+          </div>
           <p className="text-sm text-rc-muted mt-1">
             Monitor review performance and coordinate AI response drafts.
           </p>

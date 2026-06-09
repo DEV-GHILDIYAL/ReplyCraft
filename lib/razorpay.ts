@@ -18,6 +18,7 @@ export const getRazorpayInstance = () => {
 
 export const PLANS_PRICES = {
   free: 0,
-  pro: 999, // in INR
-  business: 2499, // in INR
+  starter: 499,
+  growth: 999,
+  scale: 2499,
 };

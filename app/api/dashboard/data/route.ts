@@ -16,7 +16,7 @@ export async function GET() {
     // Get business profile
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id")
+      .select("id, plan, auto_reply_enabled")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -107,6 +107,10 @@ export async function GET() {
         negative: negativeCount,
       },
       recentReviews,
+      business: {
+        plan: business.plan,
+        auto_reply_enabled: business.auto_reply_enabled,
+      },
     });
   } catch (err: any) {
     console.error("Dashboard data API error:", err);

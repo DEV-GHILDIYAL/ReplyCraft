@@ -16,9 +16,10 @@ CREATE TABLE businesses (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   category TEXT, -- restaurant | salon | clinic | hotel | retail | other
-  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'business')),
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'growth', 'scale')),
   plan_expires_at TIMESTAMPTZ,
   razorpay_customer_id TEXT,
+  auto_reply_enabled BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -78,7 +79,7 @@ CREATE TABLE payments (
   razorpay_order_id TEXT,
   razorpay_payment_id TEXT,
   amount INTEGER NOT NULL, -- in paise
-  plan TEXT NOT NULL CHECK (plan IN ('free', 'pro', 'business')),
+  plan TEXT NOT NULL CHECK (plan IN ('free', 'starter', 'growth', 'scale')),
   status TEXT NOT NULL DEFAULT 'created' CHECK (status IN ('created', 'paid', 'failed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

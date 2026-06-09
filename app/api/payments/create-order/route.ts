@@ -17,9 +17,9 @@ export async function POST(request: Request) {
 
     const { plan } = await request.json();
 
-    if (!plan || (plan !== "pro" && plan !== "business")) {
+    if (!plan || (plan !== "starter" && plan !== "growth" && plan !== "scale")) {
       return NextResponse.json(
-        { error: "Invalid plan type. Must be 'pro' or 'business'" },
+        { error: "Invalid plan type. Must be 'starter', 'growth', or 'scale'" },
         { status: 400 }
       );
     }
