@@ -183,13 +183,13 @@ export default function RegisterPage() {
           />
           <span className="text-xs text-rc-muted leading-relaxed">
             I agree to the{" "}
-            <a href="#" className="text-rc-accent hover:text-rc-accent-hover underline">
+            <Link href="/terms" className="text-rc-accent hover:text-rc-accent-hover underline">
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="#" className="text-rc-accent hover:text-rc-accent-hover underline">
+            <Link href="/privacy" className="text-rc-accent hover:text-rc-accent-hover underline">
               Privacy Policy
-            </a>
+            </Link>
           </span>
         </label>
 

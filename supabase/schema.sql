@@ -223,3 +223,27 @@ CREATE POLICY "Service role full access to sentiment_daily"
 CREATE POLICY "Service role full access to payments"
   ON payments FOR ALL
   USING (auth.role() = 'service_role');
+
+-- ============================================
+-- NOTIFICATIONS
+-- ============================================
+
+CREATE TABLE notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  link TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own notifications" ON notifications
+  FOR ALL USING (business_id IN (
+    SELECT id FROM businesses WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "Service role full access to notifications" ON notifications
+  FOR ALL USING (auth.role() = 'service_role');

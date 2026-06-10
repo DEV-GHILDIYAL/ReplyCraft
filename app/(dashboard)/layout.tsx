@@ -40,6 +40,70 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("/api/notifications");
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (business) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [business]);
+
+  const handleMarkAsRead = async (id: string, link?: string) => {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_read", notificationId: id }),
+      });
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(prev - 1, 0));
+        if (link) {
+          router.push(link);
+          setNotificationsOpen(false);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_all_read" }),
+      });
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+        toast.success("All notifications marked as read");
+      }
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
+
   // Sync business from Supabase
   useEffect(() => {
     async function initDashboard() {
@@ -317,11 +381,85 @@ export default function DashboardLayout({
 
           {/* Right info */}
           <div className="flex items-center gap-4">
-            {/* Bell icon */}
-            <button className="relative p-2 text-rc-muted hover:text-rc-text hover:bg-rc-card-hover rounded-xl transition-all">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-rc-accent rounded-full ring-2 ring-rc-card" />
-            </button>
+            {/* Bell icon and dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative p-2 text-rc-muted hover:text-rc-text hover:bg-rc-card-hover rounded-xl transition-all cursor-pointer focus:outline-none"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full ring-2 ring-rc-card" />
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <>
+                  {/* Backdrop for click outside */}
+                  <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setNotificationsOpen(false)}
+                  />
+                  
+                  {/* Dropdown Card */}
+                  <div className="absolute right-0 mt-2 w-80 bg-rc-card border border-rc-border rounded-xl shadow-2xl z-50 overflow-hidden animate-scale-in max-h-96 flex flex-col">
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b border-rc-border bg-rc-card/50 flex items-center justify-between">
+                      <span className="text-xs font-bold text-rc-text">
+                        Notifications {unreadCount > 0 && `(${unreadCount})`}
+                      </span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-[10px] text-rc-accent hover:text-rc-accent-hover font-semibold transition-all cursor-pointer focus:outline-none"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Notification list */}
+                    <div className="overflow-y-auto divide-y divide-rc-border/50 max-h-80">
+                      {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <button
+                            key={notif.id}
+                            onClick={() => handleMarkAsRead(notif.id, notif.link)}
+                            className={`w-full p-3 text-left hover:bg-rc-card-hover transition-all cursor-pointer flex gap-3 items-start relative focus:outline-none ${
+                              !notif.is_read ? "bg-rc-accent/5" : ""
+                            }`}
+                          >
+                            {/* Unread indicator */}
+                            {!notif.is_read && (
+                              <span className="absolute top-4 right-3 h-2 w-2 bg-blue-500 rounded-full" />
+                            )}
+                            
+                            <div className="flex-1 min-w-0 pr-4">
+                              <p className="text-xs text-rc-text leading-relaxed font-medium">
+                                {notif.message}
+                              </p>
+                              <span className="text-[9px] text-rc-muted block mt-1">
+                                {new Date(notif.created_at).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-rc-muted flex flex-col items-center gap-2">
+                          <Bell className="h-8 w-8 text-rc-border animate-pulse" />
+                          <span className="text-xs font-medium">No notifications yet</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Profile avatar */}
             <div className="flex items-center gap-3 border-l border-rc-border pl-4">

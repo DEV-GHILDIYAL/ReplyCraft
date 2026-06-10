@@ -142,6 +142,16 @@ export async function POST(request: Request) {
         .eq("id", paymentRecord.business_id);
 
       if (updateBizError) throw updateBizError;
+
+      // Create notification for plan upgrade
+      const planLabel = String(paymentRecord.plan).charAt(0).toUpperCase() + String(paymentRecord.plan).slice(1);
+      await supabase.from("notifications").insert({
+        business_id: paymentRecord.business_id,
+        type: "plan_upgraded",
+        message: `Your plan has been upgraded to ${planLabel}`,
+        link: "/settings",
+        is_read: false,
+      });
     }
 
     return NextResponse.json({

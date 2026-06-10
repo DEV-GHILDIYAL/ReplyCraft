@@ -262,6 +262,16 @@ export async function POST(request: Request) {
         throw insertErr;
       }
 
+      // Create notification for new review
+      const platformLabel = String(platform).charAt(0).toUpperCase() + String(platform).slice(1);
+      await supabase.from("notifications").insert({
+        business_id: business.id,
+        type: "new_review",
+        message: `You have a new review from ${platformLabel}`,
+        link: "/reviews",
+        is_read: false,
+      });
+
       // 5. Generate AI Response Draft
       let draftText = "";
       const defaultTone = "professional";

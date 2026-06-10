@@ -186,6 +186,16 @@ CRITICAL RULES:
       throw draftError;
     }
 
+    // Create notification for AI draft ready
+    const reviewerLabel = review.reviewer_name || "Anonymous";
+    await supabase.from("notifications").insert({
+      business_id: review.business_id,
+      type: "draft_ready",
+      message: `AI draft ready for ${reviewerLabel}'s review`,
+      link: "/responses",
+      is_read: false,
+    });
+
     return NextResponse.json({
       success: true,
       draft,
