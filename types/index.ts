@@ -149,9 +149,8 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 49900,
     priceDisplay: "₹499",
     features: [
-      "1 location",
       "1 platform connection",
-      "100 AI responses/mo",
+      "100 AI replies/month",
       "Manual review input",
       "Email support",
     ],
@@ -166,9 +165,8 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 99900,
     priceDisplay: "₹999",
     features: [
-      "3 locations",
       "3 platform connections",
-      "500 AI responses/mo",
+      "500 AI replies/month",
       "Manual review input",
       "Auto-publish AI replies",
       "Priority support",
@@ -184,9 +182,8 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 249900,
     priceDisplay: "₹2,499",
     features: [
-      "Unlimited locations",
       "Unlimited platform connections",
-      "Unlimited AI responses",
+      "Unlimited AI replies",
       "Manual review input",
       "Auto-publish AI replies",
       "Sentiment analytics",

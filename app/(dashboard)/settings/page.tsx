@@ -160,7 +160,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Script Loader for checkout */}
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
@@ -169,7 +169,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-rc-text">Settings</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Navigation Sidebar */}
         <div className="space-y-2">
           <button
@@ -197,7 +197,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Configuration Views */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-3">
           {activeTab === "profile" && (
             <form onSubmit={handleSaveProfile} className="p-6 rounded-xl border border-rc-border bg-rc-card space-y-6 animate-fade-in">
               <h2 className="text-base font-bold text-rc-text mb-4 border-b border-rc-border pb-3">
@@ -298,26 +298,19 @@ export default function SettingsPage() {
 
           {activeTab === "billing" && (
             <div className="space-y-8 animate-fade-in">
-              {/* Current Subscription Status */}
-              <div className="p-6 rounded-xl border border-rc-border bg-rc-card space-y-4">
-                <h3 className="text-sm font-bold text-rc-muted uppercase tracking-wider">
-                  Active Subscription
-                </h3>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <span className="text-2xl font-black capitalize text-rc-text">
-                      {plan} Plan
-                    </span>
-                    {plan !== "free" && planExpiresAt && (
-                      <p className="text-xs text-rc-muted">
-                        Renews on: {new Date(planExpiresAt).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-rc-accent-soft text-rc-accent border border-rc-accent/30 text-xs font-semibold">
-                    {plan === "free" ? "50 replies/mo" : plan === "starter" ? "100 replies/mo" : plan === "growth" ? "500 replies/mo" : "Unlimited"}
+              {/* Current Subscription Status Badge */}
+              <div className="flex items-center justify-between p-4 rounded-xl border border-rc-border bg-rc-card/50">
+                <span className="text-sm font-semibold text-rc-text flex items-center gap-2">
+                  Current Plan:{" "}
+                  <span className="px-3 py-1 rounded-full bg-rc-accent/15 text-rc-accent border border-rc-accent/25 text-xs font-bold capitalize">
+                    {plan}
                   </span>
-                </div>
+                </span>
+                {plan !== "free" && planExpiresAt && (
+                  <span className="text-xs text-rc-muted">
+                    Renews on: {new Date(planExpiresAt).toLocaleDateString()}
+                  </span>
+                )}
               </div>
 
               {/* Plans Comparison */}
@@ -326,19 +319,29 @@ export default function SettingsPage() {
                   Available Plans
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {(Object.keys(PLANS) as Array<keyof typeof PLANS>).map((key) => {
-                    const item = PLANS[key];
-                    const isActive = plan === key;
+                  {(Object.keys(PLANS) as Array<keyof typeof PLANS>)
+                    .filter((key) => key !== "free")
+                    .map((key) => {
+                      const item = PLANS[key];
+                      const isActive = plan === key;
+                      const isPopular = key === "growth";
 
-                    return (
-                      <div
-                        key={key}
-                        className={`p-5 rounded-xl border flex flex-col justify-between hover:border-rc-border-light transition-all ${
-                          isActive
-                            ? "border-rc-accent bg-rc-accent-soft/5"
-                            : "border-rc-border bg-rc-card"
-                        }`}
-                      >
+                      return (
+                        <div
+                          key={key}
+                          className={`p-5 rounded-xl border flex flex-col justify-between hover:border-rc-border-light transition-all relative ${
+                            isActive
+                              ? "border-rc-accent bg-rc-accent/5 ring-1 ring-rc-accent"
+                              : isPopular
+                              ? "border-rc-accent/40 bg-rc-card shadow-lg shadow-rc-accent/5"
+                              : "border-rc-border bg-rc-card"
+                          }`}
+                        >
+                          {isPopular && (
+                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-rc-accent text-rc-bg text-[10px] font-bold tracking-wide uppercase shadow-sm">
+                              Most Popular
+                            </span>
+                          )}
                         <div>
                           <h4 className="text-sm font-bold text-rc-text capitalize">{item.name}</h4>
                           <div className="mt-2 flex items-baseline">
@@ -362,10 +365,6 @@ export default function SettingsPage() {
                             <span className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-rc-accent/15 border border-rc-accent/35 text-rc-accent text-xs font-bold">
                               <CheckCircle2 className="h-3.5 w-3.5" />
                               Active Plan
-                            </span>
-                          ) : key === "free" ? (
-                            <span className="w-full text-center py-2 block rounded-lg bg-rc-border text-rc-muted text-xs font-semibold">
-                              Base Tier
                             </span>
                           ) : (
                             <button

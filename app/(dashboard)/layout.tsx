@@ -16,13 +16,14 @@ import {
   X,
   Bell,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface Business {
   id: string;
   name: string;
-  plan: "free" | "pro" | "business";
+  plan: "free" | "starter" | "growth" | "scale";
 }
 
 export default function DashboardLayout({
@@ -75,6 +76,12 @@ export default function DashboardLayout({
           // If on onboarding but business exists, go to dashboard
           if (pathname === "/onboarding") {
             router.push("/dashboard");
+          }
+          // Route guard for Sentiment page
+          if ((biz.plan === "free" || biz.plan === "starter") && pathname === "/sentiment") {
+            toast.error("Upgrade to Growth plan to access Sentiment Analytics");
+            router.push("/settings");
+            return;
           }
         }
       } catch (err) {
@@ -162,19 +169,29 @@ export default function DashboardLayout({
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
+            const isLocked = item.name === "Sentiment" && business && (business.plan === "free" || business.plan === "starter");
 
             return (
               <Link
                 key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                href={isLocked ? "#" : item.href}
+                onClick={(e) => {
+                  if (isLocked) {
+                    e.preventDefault();
+                    toast.error("Upgrade to Growth plan to access Sentiment Analytics");
+                  }
+                }}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? "bg-rc-accent text-rc-bg font-semibold shadow-lg shadow-rc-accent/15"
                     : "text-rc-muted hover:text-rc-text hover:bg-rc-card-hover"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                {item.name}
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5" />
+                  <span>{item.name}</span>
+                </div>
+                {isLocked && <Lock className="h-3.5 w-3.5 text-rc-muted shrink-0" />}
               </Link>
             );
           })}
@@ -218,20 +235,31 @@ export default function DashboardLayout({
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
+                  const isLocked = item.name === "Sentiment" && business && (business.plan === "free" || business.plan === "starter");
 
                   return (
                     <Link
                       key={item.name}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      href={isLocked ? "#" : item.href}
+                      onClick={(e) => {
+                        if (isLocked) {
+                          e.preventDefault();
+                          toast.error("Upgrade to Growth plan to access Sentiment Analytics");
+                        } else {
+                          setMobileMenuOpen(false);
+                        }
+                      }}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                         isActive
                           ? "bg-rc-accent text-rc-bg font-semibold"
                           : "text-rc-muted hover:text-rc-text hover:bg-rc-card-hover"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
-                      {item.name}
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      {isLocked && <Lock className="h-3.5 w-3.5 text-rc-muted shrink-0" />}
                     </Link>
                   );
                 })}
@@ -275,7 +303,9 @@ export default function DashboardLayout({
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   business.plan === "free"
                     ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
-                    : business.plan === "pro"
+                    : business.plan === "starter"
+                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                    : business.plan === "growth"
                     ? "bg-rc-accent-soft text-rc-accent border border-rc-accent/30"
                     : "bg-purple-500/15 text-purple-400 border border-purple-500/30"
                 }`}>
