@@ -114,7 +114,7 @@ export async function syncGoogleReviews(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   placeId: string,
-  business: { id: string; plan: string | null; auto_reply_enabled: boolean | null }
+  business: { id: string; name?: string; plan: string | null; auto_reply_enabled: boolean | null }
 ): Promise<number> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   const isMock = !apiKey || apiKey === "your-google-places-api-key" || apiKey.trim() === "" || placeId.includes("mock_");
@@ -245,33 +245,42 @@ export async function syncGoogleReviews(
       }
     }
 
-    // Insert Review
+    // Insert Review with ON CONFLICT DO NOTHING
     const { data: insertedReview, error: insertErr } = await supabase
       .from("reviews")
-      .insert({
-        business_id: business.id,
-        platform: "google",
-        platform_review_id: platformReviewId,
-        reviewer_name: reviewerName,
-        rating,
-        review_text: reviewText,
-        review_date: reviewDate,
-        sentiment,
-        sentiment_score: score,
-        keywords,
-        is_responded: false,
-      })
+      .upsert(
+        {
+          business_id: business.id,
+          platform: "google",
+          platform_review_id: platformReviewId,
+          reviewer_name: reviewerName,
+          rating,
+          review_text: reviewText,
+          review_date: reviewDate,
+          sentiment,
+          sentiment_score: score,
+          keywords,
+          is_responded: false,
+        },
+        {
+          onConflict: "platform_review_id",
+          ignoreDuplicates: true,
+        }
+      )
       .select()
-      .single();
+      .maybeSingle();
 
-    if (insertErr) {
-      console.error("Failed to insert review:", insertErr);
+    if (insertErr || !insertedReview) {
+      if (insertErr) {
+        console.error("Failed to insert review:", insertErr);
+      }
       continue;
     }
 
     // Generate Draft response
     let draftText = "";
     const defaultTone = "professional";
+    const businessName = business.name || "our team";
 
     if (!groq) {
       draftText = generateDraftHeuristically(
@@ -282,17 +291,65 @@ export async function syncGoogleReviews(
       );
     } else {
       try {
+        const reviewer = reviewerName || "customer";
+        let promptRules = "";
+        if (rating <= 2) {
+          promptRules = `Since the rating is low (${rating} stars), draft an apologetic response, offer a resolution (such as looking into the issue or addressing it internally), and invite direct contact to make it right.`;
+        } else if (rating === 3) {
+          promptRules = `Since the rating is moderate (${rating} stars), acknowledge their feedback, thank them, and highlight our commitment to improve our service based on their input.`;
+        } else {
+          promptRules = `Since the rating is high (${rating} stars), thank them warmly for their support and reinforce what they loved about their experience.`;
+        }
+
         const prompt = `
-          Draft a response to: "${reviewText}"
-          Rating: ${rating} stars. Tone: ${defaultTone}.
-          Rules: under 120 words, sound human. No placeholder signatures.
+          You are a customer relationship assistant for the business "${businessName}".
+          Draft a response to the following customer review.
+
+          Business Name: ${businessName}
+          Customer Name: ${reviewer}
+          Review Rating: ${rating} stars
+          Review Text: "${reviewText}"
+          Desired Response Tone: ${defaultTone}
+
+          Rules:
+          1. ${promptRules}
+          2. Sound human and authentic. Avoid corporate speak, robotic language, or clichés.
+          3. Keep the response concise: maximum 120 words.
+          4. Focus on building customer loyalty.
+          5. NEVER use placeholders, templates, or bracketed variables (like "[Your Name]", "[insert email]", "[contact number]", "[manager's name]"). All information must be complete and ready-to-publish as-is.
+          6. Sign off as "${businessName}" or "our team" generically. Do not leave a signature placeholder.
+
+          Respond ONLY with the text of the draft response. No headers, introductory phrases, or signatures like "[Your Name]". Just write the reply.
         `;
+
         const completion = await groq.chat.completions.create({
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            {
+              role: "system",
+              content: `You are a customer service assistant writing draft responses to reviews for the business: "${businessName}". 
+Output ONLY the final response text.
+
+CRITICAL RULES:
+1. NEVER include placeholders, brackets, or template tags like "[insert X]", "[your name]", "[contact details]", "[phone number]", "[email]", etc.
+2. Instead of using placeholders, use these generic but professional alternatives:
+   - Instead of contact email: say "please contact us directly" or "email us directly"
+   - Instead of manager/staff name: say "our team" or "management"
+   - Instead of phone number: say "reach out to us directly" or "call us directly"
+3. Ensure the response is completely self-contained, warm, professional, and ready to be published as-is without any editing needed.
+4. Keep the response concise (maximum 120 words) and maintain the requested tone.`
+            },
+            { role: "user", content: prompt },
+          ],
           model: "llama-3.1-8b-instant",
         });
         draftText = completion.choices[0]?.message?.content?.trim() || "";
-      } catch {
+
+        // Cleanup response formatting issues (quotes, etc.)
+        if (draftText.startsWith('"') && draftText.endsWith('"')) {
+          draftText = draftText.slice(1, -1);
+        }
+      } catch (err) {
+        console.error("Failed to generate AI draft, falling back to heuristics:", err);
         draftText = generateDraftHeuristically(
           reviewText,
           rating,
@@ -346,7 +403,7 @@ export async function POST(request: Request) {
     // Get business profile
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id, plan, auto_reply_enabled")
+      .select("id, name, plan, auto_reply_enabled")
       .eq("user_id", user.id)
       .maybeSingle();
 

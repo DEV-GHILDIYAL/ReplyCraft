@@ -39,12 +39,13 @@ export async function GET() {
       .maybeSingle();
 
 
-    // Fetch all reviews for this business
-    const { data: reviews, error: reviewsError } = await supabase
+    // Fetch 10 most recent reviews for this business
+    const { data: recentReviews, error: reviewsError } = await supabase
       .from("reviews")
       .select("*")
       .eq("business_id", businessId)
-      .order("review_date", { ascending: false });
+      .order("review_date", { ascending: false })
+      .limit(10);
 
     if (reviewsError) {
       throw reviewsError;
@@ -61,47 +62,78 @@ export async function GET() {
       throw pendingError;
     }
 
-    // Calculate statistics
-    const totalReviews = reviews?.length || 0;
+    // Calculate statistics using DB aggregate counts
+    const { count: totalReviews } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessId);
+
     let avgRating = 0;
-    let positiveCount = 0;
-    let neutralCount = 0;
-    let negativeCount = 0;
-    const platformBreakdown: Record<string, number> = {};
-    let respondedCount = 0;
-
-    if (totalReviews > 0 && reviews) {
-      let sumRating = 0;
-      reviews.forEach((r) => {
-        sumRating += r.rating || 0;
-
-        // Platform breakdown
-        const plat = r.platform || "other";
-        platformBreakdown[plat] = (platformBreakdown[plat] || 0) + 1;
-
-        // Sentiment breakdown
-        if (r.sentiment === "positive") {
-          positiveCount++;
-        } else if (r.sentiment === "neutral") {
-          neutralCount++;
-        } else if (r.sentiment === "negative") {
-          negativeCount++;
-        }
-
-        // Check if review has a response
-        if (r.is_responded) {
-          respondedCount++;
-        }
-      });
-
-      avgRating = Number((sumRating / totalReviews).toFixed(1));
+    try {
+      const { data: avgData } = await supabase
+        .from("reviews")
+        .select("rating.avg()")
+        .eq("business_id", businessId)
+        .maybeSingle();
+      if (avgData && typeof avgData === 'object') {
+        const val = Object.values(avgData)[0];
+        avgRating = val ? Number(Number(val).toFixed(1)) : 0;
+      }
+    } catch (err) {
+      console.warn("Aggregate rating.avg() failed, falling back to manual rating select:", err);
+      const { data: ratingRows } = await supabase
+        .from("reviews")
+        .select("rating")
+        .eq("business_id", businessId);
+      if (ratingRows && ratingRows.length > 0) {
+        const sum = ratingRows.reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
+        avgRating = Number((sum / ratingRows.length).toFixed(1));
+      }
     }
 
-    const responseRate =
-      totalReviews > 0 ? Math.round((respondedCount / totalReviews) * 100) : 0;
+    const { count: respondedCount } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("is_responded", true);
 
-    // Last 10 reviews
-    const recentReviews = reviews ? reviews.slice(0, 10) : [];
+    const { count: positiveCount } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("sentiment", "positive");
+
+    const { count: neutralCount } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("sentiment", "neutral");
+
+    const { count: negativeCount } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("sentiment", "negative");
+
+    const { data: connectedPlatforms } = await supabase
+      .from("platforms")
+      .select("platform")
+      .eq("business_id", businessId);
+
+    const platformBreakdown: Record<string, number> = {};
+    if (connectedPlatforms) {
+      for (const plat of connectedPlatforms) {
+        const { count } = await supabase
+          .from("reviews")
+          .select("*", { count: "exact", head: true })
+          .eq("business_id", businessId)
+          .eq("platform", plat.platform);
+        platformBreakdown[plat.platform] = count || 0;
+      }
+    }
+
+    const total = totalReviews || 0;
+    const responseRate = total > 0 ? Math.round(((respondedCount || 0) / total) * 100) : 0;
 
     return NextResponse.json({
       stats: {

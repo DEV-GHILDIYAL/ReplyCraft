@@ -96,10 +96,14 @@ export async function GET(request: Request) {
     const platform = searchParams.get("platform") || "all";
     const rating = searchParams.get("rating") || "all";
     const status = searchParams.get("status") || "all";
+    const page = Number(searchParams.get("page") || "1");
+    const limit = Number(searchParams.get("limit") || "20");
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     let query = supabase
       .from("reviews")
-      .select("*, response_drafts(*)")
+      .select("*, response_drafts(*)", { count: "exact" })
       .eq("business_id", business.id);
 
     // Apply platform filter
@@ -123,17 +127,21 @@ export async function GET(request: Request) {
       query = query.in("rating", [4, 5]);
     }
 
-    // Order by date descending
-    const { data: reviews, error: queryError } = await query.order(
-      "review_date",
-      { ascending: false }
-    );
+    // Order by date descending with range limit
+    const { data: reviews, count, error: queryError } = await query
+      .order("review_date", { ascending: false })
+      .range(from, to);
 
     if (queryError) {
       throw queryError;
     }
 
-    return NextResponse.json(reviews || []);
+    return NextResponse.json({
+      reviews: reviews || [],
+      totalCount: count || 0,
+      page,
+      limit,
+    });
   } catch (err: any) {
     console.error("GET reviews error:", err);
     return NextResponse.json(
@@ -257,6 +265,7 @@ export async function POST(request: Request) {
       // 5. Generate AI Response Draft
       let draftText = "";
       const defaultTone = "professional";
+      const businessName = business.name || "our team";
 
       if (!groq) {
         draftText = generateDraftHeuristically(
@@ -267,17 +276,65 @@ export async function POST(request: Request) {
         );
       } else {
         try {
+          const reviewer = reviewerName || "customer";
+          let promptRules = "";
+          if (rating <= 2) {
+            promptRules = `Since the rating is low (${rating} stars), draft an apologetic response, offer a resolution (such as looking into the issue or addressing it internally), and invite direct contact to make it right.`;
+          } else if (rating === 3) {
+            promptRules = `Since the rating is moderate (${rating} stars), acknowledge their feedback, thank them, and highlight our commitment to improve our service based on their input.`;
+          } else {
+            promptRules = `Since the rating is high (${rating} stars), thank them warmly for their support and reinforce what they loved about their experience.`;
+          }
+
           const prompt = `
-            Draft a response to: "${reviewText}"
-            Rating: ${rating} stars. Tone: ${defaultTone}.
-            Rules: under 120 words, sound human. No placeholder signatures.
+            You are a customer relationship assistant for the business "${businessName}".
+            Draft a response to the following customer review.
+
+            Business Name: ${businessName}
+            Customer Name: ${reviewer}
+            Review Rating: ${rating} stars
+            Review Text: "${reviewText}"
+            Desired Response Tone: ${defaultTone}
+
+            Rules:
+            1. ${promptRules}
+            2. Sound human and authentic. Avoid corporate speak, robotic language, or clichés.
+            3. Keep the response concise: maximum 120 words.
+            4. Focus on building customer loyalty.
+            5. NEVER use placeholders, templates, or bracketed variables (like "[Your Name]", "[insert email]", "[contact number]", "[manager's name]"). All information must be complete and ready-to-publish as-is.
+            6. Sign off as "${businessName}" or "our team" generically. Do not leave a signature placeholder.
+
+            Respond ONLY with the text of the draft response. No headers, introductory phrases, or signatures like "[Your Name]". Just write the reply.
           `;
+
           const completion = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+              {
+                role: "system",
+                content: `You are a customer service assistant writing draft responses to reviews for the business: "${businessName}". 
+Output ONLY the final response text.
+
+CRITICAL RULES:
+1. NEVER include placeholders, brackets, or template tags like "[insert X]", "[your name]", "[contact details]", "[phone number]", "[email]", etc.
+2. Instead of using placeholders, use these generic but professional alternatives:
+   - Instead of contact email: say "please contact us directly" or "email us directly"
+   - Instead of manager/staff name: say "our team" or "management"
+   - Instead of phone number: say "reach out to us directly" or "call us directly"
+3. Ensure the response is completely self-contained, warm, professional, and ready to be published as-is without any editing needed.
+4. Keep the response concise (maximum 120 words) and maintain the requested tone.`
+              },
+              { role: "user", content: prompt },
+            ],
             model: "llama-3.1-8b-instant",
           });
           draftText = completion.choices[0]?.message?.content?.trim() || "";
-        } catch {
+
+          // Cleanup response formatting issues (quotes, etc.)
+          if (draftText.startsWith('"') && draftText.endsWith('"')) {
+            draftText = draftText.slice(1, -1);
+          }
+        } catch (err) {
+          console.error("Failed to generate AI draft for manual review, falling back to heuristics:", err);
           draftText = generateDraftHeuristically(
             reviewText,
             rating,

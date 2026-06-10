@@ -19,8 +19,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     // 1. Signature Verification
-    if (!isPlaceholderSecret && signature) {
+    if (isProduction) {
+      if (!signature) {
+        return NextResponse.json(
+          { error: "x-razorpay-signature header is missing" },
+          { status: 401 }
+        );
+      }
+      if (isPlaceholderSecret) {
+        return NextResponse.json(
+          { error: "Webhook secret is not configured in production" },
+          { status: 500 }
+        );
+      }
       const expectedSignature = crypto
         .createHmac("sha256", secret!)
         .update(rawBody)
@@ -29,13 +43,28 @@ export async function POST(request: Request) {
       if (expectedSignature !== signature) {
         return NextResponse.json(
           { error: "Invalid webhook signature" },
-          { status: 400 }
+          { status: 401 }
         );
       }
     } else {
-      console.warn(
-        "[Razorpay Webhook] Running in SIMULATION mode because RAZORPAY_WEBHOOK_SECRET is not configured."
-      );
+      // Development/Simulation mode
+      if (signature && !isPlaceholderSecret) {
+        const expectedSignature = crypto
+          .createHmac("sha256", secret!)
+          .update(rawBody)
+          .digest("hex");
+
+        if (expectedSignature !== signature) {
+          return NextResponse.json(
+            { error: "Invalid webhook signature" },
+            { status: 401 }
+          );
+        }
+      } else {
+        console.warn(
+          "[Razorpay Webhook] Running in SIMULATION mode because signature is missing or secret is not configured in development."
+        );
+      }
     }
 
     // 2. Extract order info

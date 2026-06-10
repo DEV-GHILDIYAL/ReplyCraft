@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     // Get business profile
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id, plan, auto_reply_enabled")
+      .select("id, name, plan, auto_reply_enabled")
       .eq("user_id", user.id)
       .maybeSingle();
 

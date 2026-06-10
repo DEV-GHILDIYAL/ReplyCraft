@@ -70,9 +70,30 @@ export async function GET(request: Request) {
       body: JSON.stringify({ textQuery: query }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+
     if (!response.ok) {
-      throw new Error(data.error?.message || "Google Places API search failed");
+      let errorMessage = `Google API returned status ${response.status}`;
+      if (responseText.trim()) {
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch {
+          errorMessage += `: ${responseText}`;
+        }
+      }
+      throw new Error(errorMessage);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let data: any = {};
+    if (responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error("Failed to parse Google Places API response JSON. Raw text:", responseText);
+        throw new Error("Invalid response format received from Google Places API");
+      }
     }
 
     return NextResponse.json({ places: data.places || [] });

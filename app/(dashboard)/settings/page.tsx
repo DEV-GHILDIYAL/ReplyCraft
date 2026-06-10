@@ -18,6 +18,7 @@ export default function SettingsPage() {
   );
 
   const [activeTab, setActiveTab] = useState<"profile" | "billing">("profile");
+  const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
   const [plan, setPlan] = useState("");
@@ -41,6 +42,7 @@ export default function SettingsPage() {
       .maybeSingle();
 
     if (biz) {
+      setBusinessId(biz.id);
       setBusinessName(biz.name);
       setCategory(biz.category || "");
       setPlan(biz.plan);
@@ -56,6 +58,10 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!businessId) {
+      toast.error("Business ID not loaded yet.");
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -65,7 +71,7 @@ export default function SettingsPage() {
           category: category || null,
           auto_reply_enabled: autoReplyEnabled
         })
-        .eq("plan", plan); // matches current plan to verify row
+        .eq("id", businessId);
 
       if (error) throw error;
       toast.success("Profile details updated successfully!");

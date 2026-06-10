@@ -219,6 +219,7 @@ export default function ReviewsPage() {
   const [rating, setRating] = useState("all");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -229,6 +230,11 @@ export default function ReviewsPage() {
       setIsAddModalOpen(true);
     }
   }, [searchParams]);
+
+  // Reset page to 1 when any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [platform, rating, status, search]);
 
   // Manual review form states
   const [manualName, setManualName] = useState("");
@@ -287,11 +293,20 @@ export default function ReviewsPage() {
     }
   };
 
-  const queryUrl = `/api/reviews?platform=${platform}&rating=${rating}&status=${status}`;
-  const { data: reviews, error, isLoading, mutate } = useSWR(queryUrl, fetcher);
+  const queryUrl = `/api/reviews?platform=${platform}&rating=${rating}&status=${status}&page=${page}&limit=20`;
+  const { data: responseData, error, isLoading, mutate } = useSWR(queryUrl, fetcher);
+
+  // Handle paginated or backward-compatible array format
+  const reviewsList: Review[] = responseData && typeof responseData === "object" && !Array.isArray(responseData)
+    ? (responseData.reviews || [])
+    : (Array.isArray(responseData) ? responseData : []);
+
+  const totalReviewsCount = responseData && typeof responseData === "object" && !Array.isArray(responseData)
+    ? (responseData.totalCount || 0)
+    : reviewsList.length;
 
   // Client side search filter
-  const filteredReviews = (reviews || []).filter((r: Review) => {
+  const filteredReviews = reviewsList.filter((r: Review) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -404,15 +419,47 @@ export default function ReviewsPage() {
           </button>
         </div>
       ) : filteredReviews.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredReviews.map((review: Review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              onOpenDraft={() => setSelectedReview(review)}
-              onActionSuccess={mutate}
-            />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredReviews.map((review: Review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                onOpenDraft={() => setSelectedReview(review)}
+                onActionSuccess={mutate}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalReviewsCount > 20 && (
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 rounded-xl border border-rc-border bg-rc-card/20 mt-6 animate-fade-in">
+              <span className="text-xs text-rc-muted">
+                Showing <strong className="text-rc-text">{(page - 1) * 20 + 1}</strong> to{" "}
+                <strong className="text-rc-text">{Math.min(page * 20, totalReviewsCount)}</strong> of{" "}
+                <strong className="text-rc-text">{totalReviewsCount}</strong> reviews
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={page === 1}
+                  className="px-3.5 py-1.5 rounded-lg border border-rc-border text-xs font-semibold text-rc-text hover:bg-rc-card transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus:outline-none"
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-semibold text-rc-muted px-2">
+                  Page {page} of {Math.ceil(totalReviewsCount / 20)}
+                </span>
+                <button
+                  onClick={() => setPage((prev) => Math.min(prev + 1, Math.ceil(totalReviewsCount / 20)))}
+                  disabled={page >= Math.ceil(totalReviewsCount / 20)}
+                  className="px-3.5 py-1.5 rounded-lg border border-rc-border text-xs font-semibold text-rc-text hover:bg-rc-card transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus:outline-none"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-16 text-center border-2 border-dashed border-rc-border rounded-2xl bg-rc-card/5 max-w-lg mx-auto">
