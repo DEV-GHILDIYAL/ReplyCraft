@@ -79,6 +79,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch business name
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("name")
+      .eq("id", review.business_id)
+      .maybeSingle();
+
+    const businessName = business?.name || "our team";
+
     const groq = getGroqClient();
     let draftText = "";
 
@@ -106,9 +115,10 @@ export async function POST(request: Request) {
       }
 
       const prompt = `
-        You are a customer relationship assistant for a business.
+        You are a customer relationship assistant for the business "${businessName}".
         Draft a response to the following customer review.
 
+        Business Name: ${businessName}
         Customer Name: ${reviewer}
         Review Rating: ${rating} stars
         Review Text: "${reviewText}"
@@ -119,13 +129,28 @@ export async function POST(request: Request) {
         2. Sound human and authentic. Avoid corporate speak, robotic language, or clichés.
         3. Keep the response concise: maximum 120 words.
         4. Focus on building customer loyalty.
+        5. NEVER use placeholders, templates, or bracketed variables (like "[Your Name]", "[insert email]", "[contact number]", "[manager's name]"). All information must be complete and ready-to-publish as-is.
+        6. Sign off as "${businessName}" or "our team" generically. Do not leave a signature placeholder.
 
         Respond ONLY with the text of the draft response. No headers, introductory phrases, or signatures like "[Your Name]". Just write the reply.
       `;
 
       const response = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: "You are a customer service assistant writing draft responses to reviews. Output only the final response text." },
+          {
+            role: "system",
+            content: `You are a customer service assistant writing draft responses to reviews for the business: "${businessName}". 
+Output ONLY the final response text.
+
+CRITICAL RULES:
+1. NEVER include placeholders, brackets, or template tags like "[insert X]", "[your name]", "[contact details]", "[phone number]", "[email]", etc.
+2. Instead of using placeholders, use these generic but professional alternatives:
+   - Instead of contact email: say "please contact us directly" or "email us directly"
+   - Instead of manager/staff name: say "our team" or "management"
+   - Instead of phone number: say "reach out to us directly" or "call us directly"
+3. Ensure the response is completely self-contained, warm, professional, and ready to be published as-is without any editing needed.
+4. Keep the response concise (maximum 120 words) and maintain the requested tone.`
+          },
           { role: "user", content: prompt },
         ],
         model: "llama-3.1-8b-instant",
@@ -165,7 +190,7 @@ export async function POST(request: Request) {
       success: true,
       draft,
     });
-  } catch (err: any) {
+  } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.error("AI Draft API error:", err);
     return NextResponse.json(
       { error: err.message || "Failed to generate AI draft" },
