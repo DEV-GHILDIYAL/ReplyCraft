@@ -65,6 +65,7 @@ function generateDraftHeuristically(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MOCK_REVIEWS_FOR_PLACES: Record<string, any[]> = {
   "places/mock_place_1": [
     {
@@ -109,6 +110,227 @@ const MOCK_REVIEWS_FOR_PLACES: Record<string, any[]> = {
   ]
 };
 
+export async function syncGoogleReviews(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  placeId: string,
+  business: { id: string; plan: string | null; auto_reply_enabled: boolean | null }
+): Promise<number> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const isMock = !apiKey || apiKey === "your-google-places-api-key" || apiKey.trim() === "" || placeId.includes("mock_");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let apiReviews: any[] = [];
+
+  if (isMock) {
+    console.warn("[Google Places Sync] Running in SIMULATION mode.");
+    apiReviews = MOCK_REVIEWS_FOR_PLACES[placeId] || [
+      {
+        name: `${placeId}/reviews/default_1`,
+        rating: 4,
+        text: { text: "Great place, really liked the service." },
+        authorAttribution: { displayName: "Simulated Reviewer" },
+        publishTime: new Date().toISOString()
+      }
+    ];
+  } else {
+    // Call Google Places API Details
+    const cleanPlaceId = placeId.replace(/^places\//, "");
+    const url = `https://places.googleapis.com/v1/places/${cleanPlaceId}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-Goog-Api-Key": apiKey!,
+        "X-Goog-FieldMask": "reviews,rating,userRatingCount",
+      }
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      let errorMessage = `Google API returned status ${response.status}`;
+      if (responseText.trim()) {
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch {
+          errorMessage += `: ${responseText}`;
+        }
+      }
+      throw new Error(errorMessage);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let data: any = {};
+    if (responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error("Failed to parse Google Places API response JSON. Raw text:", responseText);
+        throw new Error("Invalid response format received from Google Places API");
+      }
+    }
+
+    apiReviews = data && Array.isArray(data.reviews) ? data.reviews : [];
+  }
+
+  // Load existing reviews to prevent duplicates (by reviewer_name + review_date or platform_review_id)
+  const { data: existingReviews } = await supabase
+    .from("reviews")
+    .select("platform_review_id, reviewer_name, review_date")
+    .eq("business_id", business.id)
+    .eq("platform", "google");
+
+  const existingReviewKeys = new Set(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (existingReviews || []).map((r: any) => `${r.reviewer_name}|${r.review_date ? new Date(r.review_date).toISOString() : ""}`)
+  );
+  const existingReviewIds = new Set(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (existingReviews || []).map((r: any) => r.platform_review_id)
+  );
+
+  const groq = getGroqClient();
+  let importedCount = 0;
+
+  for (const apiRev of apiReviews) {
+    const reviewerName = apiRev.authorAttribution?.displayName || "Anonymous";
+    const rating = apiRev.rating || 5;
+    const reviewText = apiRev.text?.text || "";
+    const reviewDate = apiRev.publishTime || new Date().toISOString();
+    const platformReviewId = apiRev.name || `manual_gen_${Math.random()}`;
+
+    const lookupKey = `${reviewerName}|${new Date(reviewDate).toISOString()}`;
+
+    // Duplicate Check
+    if (existingReviewKeys.has(lookupKey) || existingReviewIds.has(platformReviewId)) {
+      continue;
+    }
+
+    // Classify sentiment
+    let sentiment = "neutral";
+    let score = 0.5;
+    let keywords: string[] = [];
+
+    if (!groq) {
+      const res = analyzeSentimentHeuristically(reviewText);
+      sentiment = res.sentiment;
+      score = res.score;
+      keywords = res.keywords;
+    } else {
+      try {
+        const prompt = `
+          Classify sentiment of this review as exactly "positive", "neutral", or "negative".
+          Provide score from 0.0 to 1.0. Extract up to 4 keywords.
+          Return strictly JSON: { "sentiment": "...", "score": 0.5, "keywords": [] }
+          Review: "${reviewText.replace(/"/g, '\\"')}"
+        `;
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: "You are a JSON only output machine." },
+            { role: "user", content: prompt },
+          ],
+          model: "llama-3.1-8b-instant",
+          response_format: { type: "json_object" },
+        });
+        const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
+        sentiment = parsed.sentiment || "neutral";
+        score = parsed.score || 0.5;
+        keywords = parsed.keywords || [];
+      } catch {
+        const res = analyzeSentimentHeuristically(reviewText);
+        sentiment = res.sentiment;
+        score = res.score;
+        keywords = res.keywords;
+      }
+    }
+
+    // Insert Review
+    const { data: insertedReview, error: insertErr } = await supabase
+      .from("reviews")
+      .insert({
+        business_id: business.id,
+        platform: "google",
+        platform_review_id: platformReviewId,
+        reviewer_name: reviewerName,
+        rating,
+        review_text: reviewText,
+        review_date: reviewDate,
+        sentiment,
+        sentiment_score: score,
+        keywords,
+        is_responded: false,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      console.error("Failed to insert review:", insertErr);
+      continue;
+    }
+
+    // Generate Draft response
+    let draftText = "";
+    const defaultTone = "professional";
+
+    if (!groq) {
+      draftText = generateDraftHeuristically(
+        reviewText,
+        rating,
+        defaultTone,
+        reviewerName
+      );
+    } else {
+      try {
+        const prompt = `
+          Draft a response to: "${reviewText}"
+          Rating: ${rating} stars. Tone: ${defaultTone}.
+          Rules: under 120 words, sound human. No placeholder signatures.
+        `;
+        const completion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: "llama-3.1-8b-instant",
+        });
+        draftText = completion.choices[0]?.message?.content?.trim() || "";
+      } catch {
+        draftText = generateDraftHeuristically(
+          reviewText,
+          rating,
+          defaultTone,
+          reviewerName
+        );
+      }
+    }
+
+    const isAutoReply = business.auto_reply_enabled && (business.plan === "growth" || business.plan === "scale");
+
+    // Save Draft
+    await supabase.from("response_drafts").insert({
+      review_id: insertedReview.id,
+      business_id: business.id,
+      draft_text: draftText,
+      ai_model: groq ? "llama-3.1-8b-instant" : "places-fallback",
+      status: isAutoReply ? "published" : "pending",
+      tone: defaultTone,
+    });
+
+    if (isAutoReply) {
+      await supabase
+        .from("reviews")
+        .update({
+          is_responded: true,
+          response_text: draftText,
+          response_published_at: new Date().toISOString(),
+        })
+        .eq("id", insertedReview.id);
+    }
+
+    importedCount++;
+  }
+
+  return importedCount;
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -138,198 +360,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "placeId is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    const isMock = !apiKey || apiKey === "your-google-places-api-key" || apiKey.trim() === "" || placeId.includes("mock_");
-
-    let apiReviews: any[] = [];
-
-    if (isMock) {
-      console.warn("[Google Places Sync] Running in SIMULATION mode.");
-      apiReviews = MOCK_REVIEWS_FOR_PLACES[placeId] || [
-        {
-          name: `${placeId}/reviews/default_1`,
-          rating: 4,
-          text: { text: "Great place, really liked the service." },
-          authorAttribution: { displayName: "Simulated Reviewer" },
-          publishTime: new Date().toISOString()
-        }
-      ];
-    } else {
-      // Call Google Places API Details
-      const url = `https://places.googleapis.com/v1/${placeId}`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "X-Goog-Api-Key": apiKey!,
-          "X-Goog-FieldMask": "reviews,rating,userRatingCount",
-        }
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to fetch place details");
-      }
-
-      apiReviews = data.reviews || [];
-    }
-
-    // Load existing reviews to prevent duplicates (by reviewer_name + review_date or platform_review_id)
-    const { data: existingReviews } = await supabase
-      .from("reviews")
-      .select("platform_review_id, reviewer_name, review_date")
-      .eq("business_id", business.id)
-      .eq("platform", "google");
-
-    const existingReviewKeys = new Set(
-      (existingReviews || []).map(r => `${r.reviewer_name}|${r.review_date ? new Date(r.review_date).toISOString() : ""}`)
-    );
-    const existingReviewIds = new Set(
-      (existingReviews || []).map(r => r.platform_review_id)
-    );
-
-    const groq = getGroqClient();
-    let importedCount = 0;
-
-    for (const apiRev of apiReviews) {
-      const reviewerName = apiRev.authorAttribution?.displayName || "Anonymous";
-      const rating = apiRev.rating || 5;
-      const reviewText = apiRev.text?.text || "";
-      const reviewDate = apiRev.publishTime || new Date().toISOString();
-      const platformReviewId = apiRev.name || `manual_gen_${Math.random()}`;
-
-      const lookupKey = `${reviewerName}|${new Date(reviewDate).toISOString()}`;
-
-      // Duplicate Check
-      if (existingReviewKeys.has(lookupKey) || existingReviewIds.has(platformReviewId)) {
-        continue;
-      }
-
-      // Classify sentiment
-      let sentiment = "neutral";
-      let score = 0.5;
-      let keywords: string[] = [];
-
-      if (!groq) {
-        const res = analyzeSentimentHeuristically(reviewText);
-        sentiment = res.sentiment;
-        score = res.score;
-        keywords = res.keywords;
-      } else {
-        try {
-          const prompt = `
-            Classify sentiment of this review as exactly "positive", "neutral", or "negative".
-            Provide score from 0.0 to 1.0. Extract up to 4 keywords.
-            Return strictly JSON: { "sentiment": "...", "score": 0.5, "keywords": [] }
-            Review: "${reviewText.replace(/"/g, '\\"')}"
-          `;
-          const completion = await groq.chat.completions.create({
-            messages: [
-              { role: "system", content: "You are a JSON only output machine." },
-              { role: "user", content: prompt },
-            ],
-            model: "llama-3.1-8b-instant",
-            response_format: { type: "json_object" },
-          });
-          const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
-          sentiment = parsed.sentiment || "neutral";
-          score = parsed.score || 0.5;
-          keywords = parsed.keywords || [];
-        } catch {
-          const res = analyzeSentimentHeuristically(reviewText);
-          sentiment = res.sentiment;
-          score = res.score;
-          keywords = res.keywords;
-        }
-      }
-
-      // Insert Review
-      const { data: insertedReview, error: insertErr } = await supabase
-        .from("reviews")
-        .insert({
-          business_id: business.id,
-          platform: "google",
-          platform_review_id: platformReviewId,
-          reviewer_name: reviewerName,
-          rating,
-          review_text: reviewText,
-          review_date: reviewDate,
-          sentiment,
-          sentiment_score: score,
-          keywords,
-          is_responded: false,
-        })
-        .select()
-        .single();
-
-      if (insertErr) {
-        console.error("Failed to insert review:", insertErr);
-        continue;
-      }
-
-      // Generate Draft response
-      let draftText = "";
-      const defaultTone = "professional";
-
-      if (!groq) {
-        draftText = generateDraftHeuristically(
-          reviewText,
-          rating,
-          defaultTone,
-          reviewerName
-        );
-      } else {
-        try {
-          const prompt = `
-            Draft a response to: "${reviewText}"
-            Rating: ${rating} stars. Tone: ${defaultTone}.
-            Rules: under 120 words, sound human. No placeholder signatures.
-          `;
-          const completion = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama-3.1-8b-instant",
-          });
-          draftText = completion.choices[0]?.message?.content?.trim() || "";
-        } catch {
-          draftText = generateDraftHeuristically(
-            reviewText,
-            rating,
-            defaultTone,
-            reviewerName
-          );
-        }
-      }
-
-      const isAutoReply = business.auto_reply_enabled && (business.plan === "growth" || business.plan === "scale");
-
-      // Save Draft
-      await supabase.from("response_drafts").insert({
-        review_id: insertedReview.id,
-        business_id: business.id,
-        draft_text: draftText,
-        ai_model: groq ? "llama-3.1-8b-instant" : "places-fallback",
-        status: isAutoReply ? "published" : "pending",
-        tone: defaultTone,
-      });
-
-      if (isAutoReply) {
-        await supabase
-          .from("reviews")
-          .update({
-            is_responded: true,
-            response_text: draftText,
-            response_published_at: new Date().toISOString(),
-          })
-          .eq("id", insertedReview.id);
-      }
-
-      importedCount++;
-    }
+    const importedCount = await syncGoogleReviews(supabase, placeId, business);
 
     return NextResponse.json({
       success: true,
       importedCount,
     });
-  } catch (err: any) {
+  } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.error("Fetch Google Reviews API error:", err);
     return NextResponse.json(
       { error: err.message || "Failed to sync Google reviews" },

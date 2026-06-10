@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { syncGoogleReviews } from "../fetch-reviews/route";
+
 
 export async function GET() {
   try {
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
     // Get business profile
     const { data: business, error: bizError } = await supabase
       .from("businesses")
-      .select("id")
+      .select("id, plan, auto_reply_enabled")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Business profile not found" }, { status: 404 });
     }
 
-    const { placeId, name, address } = await request.json();
+    const { placeId } = await request.json();
 
     if (!placeId) {
       return NextResponse.json({ error: "placeId is required" }, { status: 400 });
@@ -108,8 +110,15 @@ export async function POST(request: Request) {
       throw saveError;
     }
 
+    // Call fetch-reviews internally and handle errors gracefully - if reviews fail, still show success for connection
+    try {
+      await syncGoogleReviews(supabase, placeId, business);
+    } catch (syncErr) {
+      console.error("Gracefully caught Google Reviews sync error during connect:", syncErr);
+    }
+
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.error("Google connect POST error:", err);
     return NextResponse.json(
       { error: err.message || "Failed to connect business profile" },
