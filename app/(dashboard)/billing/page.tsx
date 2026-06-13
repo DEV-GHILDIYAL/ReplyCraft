@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import useSWR from "swr";
 import Script from "next/script";
-import { CreditCard, Sparkles, Check, CheckCircle2, ArrowRight, Shield } from "lucide-react";
+import { CreditCard, Sparkles, Check, CheckCircle2, Shield } from "lucide-react";
 import { PLANS } from "@/types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -27,7 +27,6 @@ export default function BillingPage() {
 
   const [loading, setLoading] = useState(true);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
-  const [hasNoBusiness, setHasNoBusiness] = useState(false);
 
   const loadBusiness = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -47,7 +46,11 @@ export default function BillingPage() {
       setTrialStartedAt(biz.trial_started_at || biz.created_at);
       setAiDraftsUsed(biz.ai_drafts_used || 0);
     } else {
-      setHasNoBusiness(true);
+      setBusinessId(null);
+      setPlan("trial");
+      setPlanExpiresAt(null);
+      setTrialStartedAt(new Date().toISOString());
+      setAiDraftsUsed(0);
     }
     setLoading(false);
   };
@@ -139,31 +142,6 @@ export default function BillingPage() {
     );
   }
 
-  if (hasNoBusiness) {
-    return (
-      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
-          <Sparkles className="h-8 w-8 animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-rc-text">
-            Connect your Google Business Profile to get started
-          </h2>
-          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
-            Connect your profile to start syncing reviews and configure your billing plans.
-          </p>
-        </div>
-        <Link
-          href="/platforms"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
-        >
-          Connect Google Business Profile
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    );
-  }
-
   // Calculate drafts limit
   const limitValue = plan ? PLANS[plan as keyof typeof PLANS]?.limits.responsesPerMonth ?? 0 : 0;
   const limitDisplay = limitValue === "unlimited" ? "Unlimited" : limitValue;
@@ -185,10 +163,10 @@ export default function BillingPage() {
         const diffDays = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
         const daysLeft = Math.max(0, Math.ceil(7 - diffDays));
         return daysLeft > 0 ? (
-          <div className="mb-6 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 flex items-center justify-between animate-fade-in">
+          <div className="mb-6 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 flex items-center justify-between animate-fade-in text-xs font-semibold">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
-              <span className="text-sm font-semibold">
+              <span>
                 You are on the Free Trial. {daysLeft} {daysLeft === 1 ? "day" : "days"} left in your trial.
               </span>
             </div>
@@ -288,7 +266,7 @@ export default function BillingPage() {
                       <button
                         onClick={() => handleUpgrade(key as "starter" | "growth" | "scale")}
                         disabled={upgradingPlan !== null}
-                        className="w-full py-2.5 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center"
+                        className="w-full py-2.5 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center font-bold"
                       >
                         {upgradingPlan === key ? "Processing..." : `Upgrade to ${item.name}`}
                       </button>
@@ -419,7 +397,7 @@ export default function BillingPage() {
                           <button
                             onClick={() => handleUpgrade(key as "starter" | "growth" | "scale")}
                             disabled={upgradingPlan !== null}
-                            className="w-full py-2.5 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center"
+                            className="w-full py-2.5 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center font-bold"
                           >
                             {upgradingPlan === key ? "Processing..." : `Upgrade to ${item.name}`}
                           </button>

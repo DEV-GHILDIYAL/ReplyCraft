@@ -31,11 +31,29 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    let businessId = "";
+
     if (bizError || !business) {
-      return NextResponse.json(
-        { error: "Business profile not found" },
-        { status: 404 }
-      );
+      // Create a default business profile so they can make payments
+      const { data: newBiz, error: createBizErr } = await supabase
+        .from("businesses")
+        .insert({
+          user_id: user.id,
+          name: "My Business",
+          plan: "trial",
+          trial_started_at: new Date().toISOString(),
+          ai_drafts_used: 0,
+          ai_drafts_reset_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (createBizErr || !newBiz) {
+        throw createBizErr || new Error("Failed to create default business profile");
+      }
+      businessId = newBiz.id;
+    } else {
+      businessId = business.id;
     }
 
     const amountInPaise = PLANS_PRICES[plan as PlanType] * 100;
@@ -51,7 +69,7 @@ export async function POST(request: Request) {
       const order = await razorpay.orders.create({
         amount: amountInPaise,
         currency: "INR",
-        receipt: `receipt_${business.id.substring(0, 8)}`,
+        receipt: `receipt_${businessId.substring(0, 8)}`,
       });
       orderId = order.id;
     }
@@ -60,7 +78,7 @@ export async function POST(request: Request) {
     const { data: paymentRecord, error: insertError } = await supabase
       .from("payments")
       .insert({
-        business_id: business.id,
+        business_id: businessId,
         amount: amountInPaise,
         plan: plan,
         razorpay_order_id: orderId,

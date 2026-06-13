@@ -29,7 +29,14 @@ export default function DashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
+  const hasNoBusiness = data?.error === "Business profile not found" || (data && !data.business);
+
   const handleSyncReviews = async () => {
+    if (hasNoBusiness) {
+      toast.error("Connect a Google Business Profile on the Platforms page to sync reviews.");
+      return;
+    }
+
     setSyncing(true);
     const toastId = toast.loading("Syncing reviews from connected platforms...");
     try {
@@ -104,32 +111,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (data?.error === "Business profile not found" || (data && !data.business)) {
-    return (
-      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
-          <Sparkles className="h-8 w-8 animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-rc-text">
-            Welcome! Connect your Google Business Profile to start syncing reviews
-          </h2>
-          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
-            ReplyCraft links directly with Google Business Profile to retrieve and sync your reviews, enabling automated and AI-drafted replies in real-time.
-          </p>
-        </div>
-        <Link
-          href="/platforms"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
-        >
-          Connect Google Business Profile
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    );
-  }
-
-  if (error || !data || data.error) {
+  if (error && !hasNoBusiness) {
     return (
       <div className="p-6 lg:p-8 text-center max-w-md mx-auto mt-20">
         <h2 className="text-xl font-bold text-rc-text mb-2">Error Loading Dashboard</h2>
@@ -146,19 +128,31 @@ export default function DashboardPage() {
     );
   }
 
-  const stats = data?.stats ?? {
+  const stats = hasNoBusiness ? {
     totalReviews: 0,
     avgRating: 0,
     responseRate: 0,
     pendingResponses: 0,
     platformBreakdown: {}
-  };
-  const sentiment = data?.sentiment ?? { 
+  } : (data?.stats ?? {
+    totalReviews: 0,
+    avgRating: 0,
+    responseRate: 0,
+    pendingResponses: 0,
+    platformBreakdown: {}
+  });
+
+  const sentiment = hasNoBusiness ? {
+    positive: 0,
+    neutral: 0,
+    negative: 0
+  } : (data?.sentiment ?? { 
     positive: 0, 
     neutral: 0, 
     negative: 0 
-  };
-  const recentReviews = data?.recentReviews ?? [];
+  });
+
+  const recentReviews = hasNoBusiness ? [] : (data?.recentReviews ?? []);
 
   // Render donut chart metrics
   const totalSentiment =
@@ -186,6 +180,16 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+      {/* Inline Connection Banner */}
+      {hasNoBusiness && (
+        <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-semibold flex items-center justify-between animate-fade-in shrink-0">
+          <span>Connect your Google Business Profile to see your data.</span>
+          <Link href="/platforms" className="font-bold underline hover:text-yellow-300 transition-colors ml-2">
+            Connect Now →
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -383,7 +387,7 @@ export default function DashboardPage() {
                     ) : (
                       <button
                         onClick={() => setSelectedReview(review)}
-                        className="px-4 py-1.5 rounded-lg bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent flex items-center gap-1.5 transition-all shadow-sm"
+                        className="px-4 py-1.5 rounded-lg bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent flex items-center gap-1.5 transition-all shadow-sm font-bold"
                       >
                         <Sparkles className="h-3.5 w-3.5" /> Draft Response
                       </button>
@@ -393,10 +397,10 @@ export default function DashboardPage() {
               ))
             ) : (
               <div className="p-12 text-center rounded-xl border border-dashed border-rc-border bg-rc-card/10">
-                <p className="text-sm text-rc-muted mb-4">No reviews found. Seed some to get started!</p>
+                <p className="text-sm text-rc-muted mb-4">No reviews found. Connect a Google Business Profile or seed reviews!</p>
                 <button
                   onClick={handleSyncReviews}
-                  className="px-5 py-2.5 rounded-xl bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent transition-all font-bold"
                 >
                   Seed Mock Reviews
                 </button>

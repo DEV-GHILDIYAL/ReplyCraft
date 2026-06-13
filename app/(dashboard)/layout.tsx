@@ -25,6 +25,7 @@ interface Business {
   id: string;
   name: string;
   plan: "trial" | "starter" | "growth" | "scale";
+  trial_started_at: string | null;
 }
 
 export default function DashboardLayout({
@@ -124,7 +125,7 @@ export default function DashboardLayout({
         // Fetch user's business
         const { data: biz, error: bizError } = await supabase
           .from("businesses")
-          .select("id, name, plan")
+          .select("id, name, plan, trial_started_at, created_at")
           .maybeSingle();
 
         if (bizError) {
@@ -137,6 +138,7 @@ export default function DashboardLayout({
           const mappedBiz = {
             ...biz,
             plan: (biz.plan === "free" ? "trial" : biz.plan) as "trial" | "starter" | "growth" | "scale",
+            trial_started_at: biz.trial_started_at || biz.created_at,
           };
           setBusiness(mappedBiz);
           // Route guard for Sentiment page
@@ -212,6 +214,19 @@ export default function DashboardLayout({
       </div>
     );
   }
+
+  const getTrialDaysRemaining = () => {
+    if (!business || !business.trial_started_at) return 7;
+    const start = new Date(business.trial_started_at);
+    const now = new Date();
+    const diffTime = now.getTime() - start.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(7 - diffDays));
+  };
+
+  const trialDaysRemaining = getTrialDaysRemaining();
+  const isTrial = business?.plan === "trial";
+  const trialExpired = isTrial && trialDaysRemaining <= 0;
 
   return (
     <div className="min-h-screen bg-rc-bg flex">
@@ -346,6 +361,25 @@ export default function DashboardLayout({
 
       {/* Main Column */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Trial Banner */}
+        {isTrial && (
+          trialExpired ? (
+            <div className="bg-red-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-fade-in shrink-0 shadow-sm">
+              <span>Your trial has ended. Upgrade to continue.</span>
+              <Link href="/billing" className="underline hover:text-red-200 ml-1.5 font-extrabold transition-colors">
+                Upgrade Now →
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-amber-500 text-gray-900 text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-fade-in shrink-0 shadow-sm">
+              <span>🎉 Free Trial — {trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining. Upgrade to keep access.</span>
+              <Link href="/billing" className="underline hover:text-gray-700 ml-1.5 font-extrabold transition-colors">
+                Upgrade →
+              </Link>
+            </div>
+          )
+        )}
+
         {/* Topbar */}
         <header className="h-16 border-b border-rc-border bg-rc-card/30 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 z-10">
           {/* Left info / Mobile toggle */}

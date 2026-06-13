@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
+import Link from "next/link";
 import { toast } from "react-hot-toast";
 import {
   Sparkles,
@@ -17,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import ResponseDraftModal from "@/components/dashboard/ResponseDraftModal";
-import type { Review, PlatformName } from "@/types";
+import type { Review } from "@/types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -203,7 +204,7 @@ function ReviewCard({
 
           <button
             onClick={onOpenDraft}
-            className="px-4 py-1.5 rounded-lg bg-rc-accent hover:bg-rc-accent-hover text-xs font-bold text-rc-bg flex items-center gap-1.5 transition-all shadow-md shadow-rc-accent/10"
+            className="px-4 py-1.5 rounded-lg bg-rc-accent hover:bg-rc-accent-hover text-xs font-bold text-rc-bg flex items-center gap-1.5 transition-all shadow-md shadow-rc-accent/10 font-bold"
           >
             <Sparkles className="h-3.5 w-3.5" />
             AI Draft
@@ -296,12 +297,18 @@ export default function ReviewsPage() {
   const queryUrl = `/api/reviews?platform=${platform}&rating=${rating}&status=${status}&page=${page}&limit=20`;
   const { data: responseData, error, isLoading, mutate } = useSWR(queryUrl, fetcher);
 
+  const hasNoBusiness = responseData && ("error" in responseData || (responseData as any).error === "Business profile not found");
+
   // Handle paginated or backward-compatible array format
-  const reviewsList: Review[] = responseData && typeof responseData === "object" && !Array.isArray(responseData)
+  const reviewsList: Review[] = hasNoBusiness
+    ? []
+    : responseData && typeof responseData === "object" && !Array.isArray(responseData)
     ? (responseData.reviews || [])
     : (Array.isArray(responseData) ? responseData : []);
 
-  const totalReviewsCount = responseData && typeof responseData === "object" && !Array.isArray(responseData)
+  const totalReviewsCount = hasNoBusiness
+    ? 0
+    : responseData && typeof responseData === "object" && !Array.isArray(responseData)
     ? (responseData.totalCount || 0)
     : reviewsList.length;
 
@@ -318,6 +325,16 @@ export default function ReviewsPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+      {/* Inline Connection Banner */}
+      {hasNoBusiness && (
+        <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-semibold flex items-center justify-between animate-fade-in shrink-0">
+          <span>Connect your Google Business Profile to see your data.</span>
+          <Link href="/platforms" className="font-bold underline hover:text-yellow-300 transition-colors ml-2">
+            Connect Now →
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -329,8 +346,14 @@ export default function ReviewsPage() {
           </p>
         </div>
         <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15 cursor-pointer shrink-0"
+          onClick={() => {
+            if (hasNoBusiness) {
+              toast.error("Please connect your Google Business Profile on Platforms page first.");
+              return;
+            }
+            setIsAddModalOpen(true);
+          }}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15 cursor-pointer shrink-0 font-bold"
         >
           <Sparkles className="h-4 w-4" />
           Add Review Manually
@@ -408,7 +431,7 @@ export default function ReviewsPage() {
             <div key={i} className="h-48 bg-rc-card border border-rc-border rounded-2xl"></div>
           ))}
         </div>
-      ) : error ? (
+      ) : error && !hasNoBusiness ? (
         <div className="text-center py-12">
           <p className="text-sm text-rc-muted mb-4">Error loading reviews.</p>
           <button
@@ -475,7 +498,7 @@ export default function ReviewsPage() {
               setStatus("all");
               setSearch("");
             }}
-            className="px-5 py-2.5 rounded-xl bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent transition-all"
+            className="px-5 py-2.5 rounded-xl bg-rc-accent/10 border border-rc-accent/20 hover:bg-rc-accent hover:text-rc-bg text-xs font-semibold text-rc-accent transition-all font-bold"
           >
             Reset All Filters
           </button>
@@ -615,7 +638,7 @@ export default function ReviewsPage() {
                 <button
                   type="submit"
                   disabled={addingReview}
-                  className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-rc-accent/10 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-rc-accent/10 cursor-pointer font-bold"
                 >
                   {addingReview ? (
                     <>

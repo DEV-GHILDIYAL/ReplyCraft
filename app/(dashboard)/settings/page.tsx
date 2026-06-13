@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
-import { Settings, Sparkles, Check, ArrowRight } from "lucide-react";
+import { Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -23,11 +22,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingPreferences, setSavingPreferences] = useState(false);
-  const [hasNoBusiness, setHasNoBusiness] = useState(false);
 
   const loadBusiness = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-
     const { data: biz } = await supabase
       .from("businesses")
       .select("*")
@@ -46,7 +42,14 @@ export default function SettingsPage() {
       setChallenge(onboardingData.challenge || "");
       setTone(onboardingData.tone || "Professional");
     } else {
-      setHasNoBusiness(true);
+      setBusinessId(null);
+      setBusinessName("");
+      setCategory("");
+      setPlan("trial");
+      setAutoReplyEnabled(false);
+      setGoal("");
+      setChallenge("");
+      setTone("Professional");
     }
     setLoading(false);
   };
@@ -57,25 +60,47 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessId) {
-      toast.error("Business ID not loaded yet.");
-      return;
-    }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("businesses")
-        .update({ 
-          name: businessName, 
-          category: category || null,
-          auto_reply_enabled: autoReplyEnabled
-        })
-        .eq("id", businessId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User session not found. Please log in.");
 
-      if (error) throw error;
-      toast.success("Business information updated successfully!");
+      if (businessId) {
+        // Update existing business
+        const { error } = await supabase
+          .from("businesses")
+          .update({ 
+            name: businessName, 
+            category: category || null,
+            auto_reply_enabled: autoReplyEnabled
+          })
+          .eq("id", businessId);
+
+        if (error) throw error;
+        toast.success("Business information updated successfully!");
+      } else {
+        // Create new business profile on trial plan
+        const { data: newBiz, error } = await supabase
+          .from("businesses")
+          .insert({
+            user_id: user.id,
+            name: businessName,
+            category: category || null,
+            auto_reply_enabled: autoReplyEnabled,
+            plan: "trial",
+            trial_started_at: new Date().toISOString(),
+            ai_drafts_used: 0,
+            ai_drafts_reset_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+
+        if (error || !newBiz) throw error || new Error("Failed to create business profile");
+        setBusinessId(newBiz.id);
+        toast.success("Business profile created successfully!");
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to update business information");
+      toast.error(err.message || "Failed to save business information");
     } finally {
       setSaving(false);
     }
@@ -83,27 +108,53 @@ export default function SettingsPage() {
 
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessId) {
-      toast.error("Business ID not loaded yet.");
-      return;
-    }
     setSavingPreferences(true);
     try {
-      const { error } = await supabase
-        .from("businesses")
-        .update({ 
-          onboarding_data: {
-            goal,
-            challenge,
-            tone
-          }
-        })
-        .eq("id", businessId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User session not found. Please log in.");
 
-      if (error) throw error;
-      toast.success("Business profile preferences updated successfully!");
+      let currentBizId = businessId;
+      if (!currentBizId) {
+        // Create a default business first if none exists
+        const { data: newBiz, error } = await supabase
+          .from("businesses")
+          .insert({
+            user_id: user.id,
+            name: "My Business",
+            plan: "trial",
+            trial_started_at: new Date().toISOString(),
+            ai_drafts_used: 0,
+            ai_drafts_reset_at: new Date().toISOString(),
+            onboarding_data: {
+              goal,
+              challenge,
+              tone
+            }
+          })
+          .select("id")
+          .single();
+
+        if (error || !newBiz) throw error || new Error("Failed to create business profile");
+        setBusinessId(newBiz.id);
+        toast.success("Business profile created & preferences saved!");
+      } else {
+        // Update existing business preferences
+        const { error } = await supabase
+          .from("businesses")
+          .update({ 
+            onboarding_data: {
+              goal,
+              challenge,
+              tone
+            }
+          })
+          .eq("id", currentBizId);
+
+        if (error) throw error;
+        toast.success("Business profile preferences updated successfully!");
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to update business preferences");
+      toast.error(err.message || "Failed to save business preferences");
     } finally {
       setSavingPreferences(false);
     }
@@ -114,31 +165,6 @@ export default function SettingsPage() {
       <div className="p-6 max-w-4xl mx-auto space-y-6 animate-pulse">
         <div className="h-8 bg-rc-card w-1/4 rounded-lg"></div>
         <div className="h-64 bg-rc-card rounded-xl"></div>
-      </div>
-    );
-  }
-
-  if (hasNoBusiness) {
-    return (
-      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
-          <Sparkles className="h-8 w-8 animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-rc-text">
-            Connect your Google Business Profile to get started
-          </h2>
-          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
-            Connect your profile to start syncing reviews and configure your business settings.
-          </p>
-        </div>
-        <Link
-          href="/platforms"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
-        >
-          Connect Google Business Profile
-          <ArrowRight className="h-4 w-4" />
-        </Link>
       </div>
     );
   }
@@ -166,6 +192,7 @@ export default function SettingsPage() {
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               required
+              placeholder="e.g. My Business"
               className="w-full px-4 py-2.5 rounded-xl bg-rc-bg border border-rc-border text-rc-text placeholder-rc-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-rc-accent/30 focus:border-rc-accent/50 transition-all"
             />
           </div>
@@ -242,7 +269,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 cursor-pointer"
+            className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 cursor-pointer font-bold"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -307,7 +334,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={savingPreferences}
-            className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 cursor-pointer"
+            className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 cursor-pointer font-bold"
           >
             {savingPreferences ? "Saving..." : "Save Preferences"}
           </button>
