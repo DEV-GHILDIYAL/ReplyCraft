@@ -39,7 +39,10 @@ export async function POST(request: Request) {
         user_id: user.id,
         name: businessName,
         category: category,
-        plan: "free", // Database constraint only allows 'free', 'starter', 'growth', 'scale'.
+        plan: "trial",
+        trial_started_at: new Date().toISOString(),
+        ai_drafts_used: 0,
+        ai_drafts_reset_at: new Date().toISOString(),
         onboarding_data: {
           goal,
           challenge,
