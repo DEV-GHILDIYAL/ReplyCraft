@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  // Listen for the active auth session arriving (specifically useful for Google OAuth redirections)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session) {
+        router.push("/dashboard");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +43,6 @@ export default function LoginPage() {
       }
 
       router.push("/dashboard");
-      router.refresh();
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
@@ -63,7 +75,7 @@ export default function LoginPage() {
       {/* Google OAuth */}
       <button
         onClick={handleGoogleLogin}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-rc-border bg-rc-bg/50 text-sm font-medium text-rc-text hover:bg-rc-bg hover:border-rc-border-light transition-all duration-200"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-rc-border bg-rc-bg/50 text-sm font-medium text-rc-text hover:bg-rc-bg hover:border-rc-border-light transition-all duration-200 cursor-pointer"
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24">
           <path
@@ -154,7 +166,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 px-6 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 px-6 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

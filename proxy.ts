@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the session (important for server components)
+  // Await the session/user retrieval completely before route checks
   const {
     data: { user },
   } = await supabase.auth.getUser();

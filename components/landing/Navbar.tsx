@@ -1,10 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    }
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
@@ -42,20 +61,31 @@ export default function Navbar() {
             </a>
           </div>
 
-          {/* Desktop Auth */}
+          {/* Desktop Auth / Action */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm text-rc-muted hover:text-rc-text transition-colors px-4 py-2"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-medium bg-rc-accent text-rc-bg px-5 py-2 rounded-lg hover:bg-rc-accent-hover transition-colors"
-            >
-              Start Free Trial
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium bg-rc-accent text-rc-bg px-5 py-2 rounded-lg hover:bg-rc-accent-hover transition-colors"
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm text-rc-muted hover:text-rc-text transition-colors px-4 py-2"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-sm font-medium bg-rc-accent text-rc-bg px-5 py-2 rounded-lg hover:bg-rc-accent-hover transition-colors"
+                >
+                  Start Free Trial
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -102,18 +132,32 @@ export default function Navbar() {
                 Pricing
               </a>
               <div className="border-t border-rc-border pt-3 mt-1 flex flex-col gap-2">
-                <Link
-                  href="/login"
-                  className="text-sm text-rc-muted hover:text-rc-text px-3 py-2 rounded-md hover:bg-rc-card transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-sm font-medium bg-rc-accent text-rc-bg px-4 py-2.5 rounded-lg text-center hover:bg-rc-accent-hover transition-colors"
-                >
-                  Start Free Trial
-                </Link>
+                {isLoggedIn ? (
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-medium bg-rc-accent text-rc-bg px-4 py-2.5 rounded-lg text-center hover:bg-rc-accent-hover transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="text-sm text-rc-muted hover:text-rc-text px-3 py-2 rounded-md hover:bg-rc-card transition-colors"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="text-sm font-medium bg-rc-accent text-rc-bg px-4 py-2.5 rounded-lg text-center hover:bg-rc-accent-hover transition-colors"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Start Free Trial
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
