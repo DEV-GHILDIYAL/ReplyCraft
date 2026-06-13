@@ -29,7 +29,9 @@ export async function GET(request: Request) {
     if (!isMock) {
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-      const redirectUri = `${requestUrl()}/api/platforms/google/callback`;
+      const redirectUri = process.env.NEXT_PUBLIC_APP_URL 
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/platforms/google/callback`
+        : 'http://localhost:3000/api/platforms/google/callback';
 
       try {
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {

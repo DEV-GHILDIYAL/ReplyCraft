@@ -15,7 +15,10 @@ export async function GET() {
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = `${requestUrl()}/api/platforms/google/callback`;
+    
+    const redirectUri = process.env.NEXT_PUBLIC_APP_URL 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/platforms/google/callback`
+      : 'http://localhost:3000/api/platforms/google/callback';
 
     const isPlaceholderKeys =
       !clientId || clientId === "your-google-client-id" || clientId.trim() === "";
@@ -36,7 +39,7 @@ export async function GET() {
       redirectUri
     )}&response_type=code&scope=${encodeURIComponent(
       scope
-    )}&access_type=offline&prompt=consent`;
+    )}&access_type=offline&prompt=select_account consent`;
 
     return NextResponse.redirect(authUrl);
   } catch (err) {
