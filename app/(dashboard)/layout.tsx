@@ -17,6 +17,7 @@ import {
   Bell,
   Sparkles,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -172,6 +173,7 @@ export default function DashboardLayout({
     { name: "Responses", href: "/responses", icon: CheckCircle },
     { name: "Sentiment", href: "/sentiment", icon: TrendingUp },
     { name: "Platforms", href: "/platforms", icon: Link2 },
+    { name: "Billing & Plans", href: "/billing", icon: CreditCard },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

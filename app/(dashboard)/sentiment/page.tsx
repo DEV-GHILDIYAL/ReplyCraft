@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import useSWR from "swr";
 import {
   TrendingUp,
@@ -9,6 +10,8 @@ import {
   Activity,
   Layers,
   Tag,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -55,6 +58,8 @@ export default function SentimentPage() {
     fetcher
   );
 
+  const hasNoBusiness = data && ("error" in data || (data as any).error === "Business profile not found");
+
   if (isLoading) {
     return (
       <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-pulse">
@@ -64,6 +69,31 @@ export default function SentimentPage() {
           <div className="h-[350px] bg-rc-card border border-rc-border rounded-2xl"></div>
         </div>
         <div className="h-64 bg-rc-card border border-rc-border rounded-2xl"></div>
+      </div>
+    );
+  }
+
+  if (hasNoBusiness) {
+    return (
+      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
+          <Sparkles className="h-8 w-8 animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-rc-text">
+            Connect your Google Business Profile to get started
+          </h2>
+          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
+            Connect your profile to start syncing reviews and analyzing user sentiments.
+          </p>
+        </div>
+        <Link
+          href="/platforms"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
+        >
+          Connect Google Business Profile
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     );
   }

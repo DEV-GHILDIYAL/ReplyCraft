@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { toast } from "react-hot-toast";
 import {
@@ -13,6 +14,7 @@ import {
   Sparkles,
   Inbox,
   RefreshCw,
+  ArrowRight,
 } from "lucide-react";
 import type { ResponseDraft, Review } from "@/types";
 
@@ -23,7 +25,7 @@ interface ExtendedDraft extends ResponseDraft {
 }
 
 export default function ResponsesPage() {
-  const { data: drafts, error, isLoading, mutate } = useSWR<ExtendedDraft[]>(
+  const { data: drafts, error, isLoading, mutate } = useSWR<ExtendedDraft[] | { error: string }>(
     "/api/responses",
     fetcher
   );
@@ -36,8 +38,11 @@ export default function ResponsesPage() {
   const [savingAction, setSavingAction] = useState<string | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
 
+  const hasNoBusiness = drafts && ("error" in drafts || (drafts as any).error === "Business profile not found");
+
   // Group drafts by status
-  const filteredDrafts = (drafts || []).filter(
+  const draftsArray = Array.isArray(drafts) ? drafts : [];
+  const filteredDrafts = draftsArray.filter(
     (draft) => draft.status === activeTab
   );
 
@@ -116,7 +121,7 @@ export default function ResponsesPage() {
   };
 
   const handleBulkApprove = async () => {
-    const pendingCount = (drafts || []).filter((d) => d.status === "pending").length;
+    const pendingCount = draftsArray.filter((d) => d.status === "pending").length;
     if (pendingCount === 0) {
       toast.error("No pending drafts to approve.");
       return;
@@ -148,26 +153,85 @@ export default function ResponsesPage() {
     setEditText(draft.draft_text);
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-pulse">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-8 w-48 bg-rc-card rounded-lg"></div>
+            <div className="h-4 w-64 bg-rc-card rounded-md mt-2"></div>
+          </div>
+          <div className="h-10 w-32 bg-rc-card rounded-xl"></div>
+        </div>
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-48 bg-rc-card border border-rc-border rounded-2xl"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (hasNoBusiness) {
+    return (
+      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
+          <Sparkles className="h-8 w-8 animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-rc-text">
+            Connect your Google Business Profile to get started
+          </h2>
+          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
+            Connect your profile to start syncing reviews and drafting automated, AI-powered response drafts.
+          </p>
+        </div>
+        <Link
+          href="/platforms"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
+        >
+          Connect Google Business Profile
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-sm text-rc-muted mb-4">Error loading drafts queue.</p>
+        <button
+          onClick={() => mutate()}
+          className="px-4 py-2 rounded-xl bg-rc-accent text-rc-bg text-xs font-semibold hover:bg-rc-accent-hover transition-all"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const tabs: { value: typeof activeTab; label: string; count: number }[] = [
     {
       value: "pending",
       label: "Pending Approval",
-      count: (drafts || []).filter((d) => d.status === "pending").length,
+      count: draftsArray.filter((d) => d.status === "pending").length,
     },
     {
       value: "approved",
       label: "Approved",
-      count: (drafts || []).filter((d) => d.status === "approved").length,
+      count: draftsArray.filter((d) => d.status === "approved").length,
     },
     {
       value: "published",
       label: "Published",
-      count: (drafts || []).filter((d) => d.status === "published").length,
+      count: draftsArray.filter((d) => d.status === "published").length,
     },
     {
       value: "rejected",
       label: "Rejected",
-      count: (drafts || []).filter((d) => d.status === "rejected").length,
+      count: draftsArray.filter((d) => d.status === "rejected").length,
     },
   ];
 
@@ -187,7 +251,7 @@ export default function ResponsesPage() {
         {activeTab === "pending" && (
           <button
             onClick={handleBulkApprove}
-            disabled={bulkApproving || isLoading}
+            disabled={bulkApproving}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15 disabled:opacity-60"
           >
             {bulkApproving ? (
@@ -227,23 +291,7 @@ export default function ResponsesPage() {
       </div>
 
       {/* List */}
-      {isLoading ? (
-        <div className="space-y-6 animate-pulse">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-48 bg-rc-card border border-rc-border rounded-2xl"></div>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-12">
-          <p className="text-sm text-rc-muted mb-4">Error loading drafts queue.</p>
-          <button
-            onClick={() => mutate()}
-            className="px-4 py-2 rounded-xl bg-rc-accent text-rc-bg text-xs font-semibold hover:bg-rc-accent-hover transition-all"
-          >
-            Retry
-          </button>
-        </div>
-      ) : filteredDrafts.length > 0 ? (
+      {filteredDrafts.length > 0 ? (
         <div className="space-y-6">
           {filteredDrafts.map((draft) => {
             const review = draft.reviews;

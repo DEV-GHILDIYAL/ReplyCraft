@@ -44,7 +44,8 @@ export async function proxy(request: NextRequest) {
     "/reviews",
     "/responses",
     "/sentiment",
-    "/platforms"
+    "/platforms",
+    "/billing"
   ];
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route)
@@ -78,6 +79,7 @@ export const config = {
     "/sentiment/:path*",
     "/platforms/:path*",
     "/settings/:path*",
+    "/billing/:path*",
     "/onboarding/:path*",
     "/login",
     "/register",
