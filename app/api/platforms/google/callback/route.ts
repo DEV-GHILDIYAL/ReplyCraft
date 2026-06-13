@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const code = searchParams.get("code");
 
     if (!code) {
-      return NextResponse.redirect(new URL("/onboarding?error=missing_code", requestUrl()));
+      return NextResponse.redirect(new URL("/platforms?error=missing_code", requestUrl()));
     }
 
     const supabase = await createServerSupabaseClient();
@@ -120,7 +120,7 @@ export async function GET(request: Request) {
       } catch (err) {
         console.error("Failed to fetch verified GMB locations:", err);
         return NextResponse.redirect(
-          new URL("/onboarding?error=google_auth_failed", requestUrl())
+          new URL("/platforms?error=google_auth_failed", requestUrl())
         );
       }
     } else {
@@ -145,8 +145,8 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Redirect user to onboarding select-location step
-    const redirectUrl = new URL("/onboarding", requestUrl());
+    // Redirect user to platforms select-location step
+    const redirectUrl = new URL("/platforms", requestUrl());
     redirectUrl.searchParams.set("step", "select-location");
     redirectUrl.searchParams.set("locations", JSON.stringify(locations));
     redirectUrl.searchParams.set("access_token", accessToken);
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectUrl);
   } catch (err: any) {
     console.error("Google callback error:", err);
-    return NextResponse.redirect(new URL("/onboarding?error=system_error", requestUrl()));
+    return NextResponse.redirect(new URL("/platforms?error=system_error", requestUrl()));
   }
 }
 

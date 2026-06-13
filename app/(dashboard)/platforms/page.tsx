@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
-import { Link2, Check, RefreshCw, AlertCircle, Search, X, Lock } from "lucide-react";
+import { Link2, Check, RefreshCw, AlertCircle, Lock, Sparkles, MapPin, AlertTriangle } from "lucide-react";
 import type { Platform, PlanType } from "@/types";
 import { PLANS } from "@/types";
 
@@ -82,27 +82,17 @@ export default function PlatformsPage() {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanType>("trial");
 
-  // Google Places search / connect states
-  const [googleSearchActive, setGoogleSearchActive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchCity, setSearchCity] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<any | null>(null);
-  const [connecting, setConnecting] = useState(false);
-  const [isMockMode, setIsMockMode] = useState(false);
+  // Google OAuth connect flow states
+  const stepParam = searchParams.get("step");
+  const locationsParam = searchParams.get("locations");
+  const accessTokenParam = searchParams.get("access_token");
+  const refreshTokenParam = searchParams.get("refresh_token");
+  const tokenExpiresAtParam = searchParams.get("token_expires_at");
+  const errorParam = searchParams.get("error");
 
-  const parseCityCountry = (address: string) => {
-    if (!address) return "";
-    const parts = address.split(",").map((p) => p.trim());
-    if (parts.length >= 2) {
-      const country = parts[parts.length - 1];
-      const cityAndState = parts[parts.length - 2];
-      const cityClean = cityAndState.replace(/\b\d+\b/g, "").replace(/\s+/g, " ").trim();
-      return `${cityClean}, ${country}`;
-    }
-    return address;
-  };
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedLoc, setSelectedLoc] = useState<any | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadPlatforms = async () => {
     const { data: biz } = await supabase
@@ -127,17 +117,29 @@ export default function PlatformsPage() {
     loadPlatforms();
   }, [supabase]);
 
-  // Check if API key is missing on mount
+  // Parse locations if available from GMB OAuth callback
   useEffect(() => {
-    fetch("/api/platforms/google/places-search")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && typeof data.isMock === "boolean") {
-          setIsMockMode(data.isMock);
-        }
-      })
-      .catch((err) => console.error("Error checking places mock status:", err));
-  }, []);
+    if (locationsParam) {
+      try {
+        const decoded = JSON.parse(locationsParam);
+        setLocations(decoded);
+      } catch (e) {
+        console.error("Failed to parse locations from query param:", e);
+        toast.error("Failed to load Google locations.");
+      }
+    }
+  }, [locationsParam]);
+
+  // Display OAuth or integration errors if present
+  useEffect(() => {
+    if (errorParam) {
+      if (errorParam === "google_auth_failed") {
+        toast.error("Google authentication failed. Please try again.");
+      } else {
+        toast.error("A system error occurred. Please try again.");
+      }
+    }
+  }, [errorParam]);
 
   // Handle Toast triggers from URL callback params
   useEffect(() => {
@@ -149,7 +151,7 @@ export default function PlatformsPage() {
       router.replace("/platforms");
     }
 
-    if (error) {
+    if (error && error !== "google_auth_failed") {
       toast.error(
         error === "google_auth_failed"
           ? "Failed to connect to Google account."
@@ -161,7 +163,8 @@ export default function PlatformsPage() {
 
   const handleConnect = (platformKey: string) => {
     if (platformKey === "google") {
-      setGoogleSearchActive(true);
+      setActionLoading(true);
+      window.location.href = "/api/platforms/google/connect";
     }
   };
 
@@ -182,95 +185,154 @@ export default function PlatformsPage() {
     }
   };
 
-  const handleGoogleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setSearching(true);
-    setSelectedPlace(null);
-    try {
-      const fullQuery = searchCity.trim()
-        ? `${searchQuery.trim()} ${searchCity.trim()}`
-        : searchQuery.trim();
-
-      const response = await fetch(
-        `/api/platforms/google/places-search?query=${encodeURIComponent(fullQuery)}`
-      );
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.error || "Search failed");
-
-      setSearchResults(resData.places || []);
-      if ((resData.places || []).length === 0) {
-        toast.error("No businesses found matching that query.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to search Google Places.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleGoogleConnect = async () => {
-    if (!selectedPlace || !businessId) return;
-
-    setConnecting(true);
-    const toastId = toast.loading("Connecting your business and syncing reviews...");
-    try {
-      // Step 3a: Save place_id to platforms table
-      const connectResponse = await fetch("/api/platforms/google/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          placeId: selectedPlace.id,
-          name: selectedPlace.displayName?.text || selectedPlace.displayName || "Google Business",
-          address: selectedPlace.formattedAddress,
-        }),
-      });
-
-      const connectData = await connectResponse.json();
-      if (!connectResponse.ok) throw new Error(connectData.error || "Connection failed");
-
-      // Step 3b: Call /api/platforms/google/fetch-reviews
-      const fetchResponse = await fetch("/api/platforms/google/fetch-reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placeId: selectedPlace.id }),
-      });
-
-      const fetchData = await fetchResponse.json();
-      if (!fetchResponse.ok) throw new Error(fetchData.error || "Failed to import reviews");
-
-      toast.success(`${fetchData.importedCount || 0} reviews imported!`, { id: toastId });
-
-      // Reset search states
-      setGoogleSearchActive(false);
-      setSearchQuery("");
-      setSearchCity("");
-      setSearchResults([]);
-      setSelectedPlace(null);
-
-      // Reload platforms
-      loadPlatforms();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to connect business.", { id: toastId });
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const resetGoogleSearch = () => {
-    setGoogleSearchActive(false);
-    setSearchQuery("");
-    setSearchCity("");
-    setSearchResults([]);
-    setSelectedPlace(null);
-  };
-
-  if (loading) {
+  if (loading || actionLoading) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6 animate-pulse">
         <div className="h-8 bg-rc-card w-1/4 rounded-lg"></div>
         <div className="h-64 bg-rc-card rounded-xl"></div>
+      </div>
+    );
+  }
+
+  // Intercept render if we are in select-location step
+  if (stepParam === "select-location") {
+    return (
+      <div className="p-6 lg:p-8 max-w-xl mx-auto space-y-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Link2 className="h-6 w-6 text-rc-accent" />
+          <h1 className="text-2xl font-bold text-rc-text">Connect Google Business</h1>
+        </div>
+
+        {locations.length > 0 ? (
+          <div className="p-6 sm:p-8 rounded-2xl border border-rc-border bg-rc-card/50 backdrop-blur-md shadow-2xl space-y-6 animate-fade-in">
+            <div className="text-center space-y-2 mb-4">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
+                <Sparkles className="h-5 w-5 animate-pulse" />
+              </div>
+              <h2 className="text-xl font-bold text-rc-text">
+                Select Your Verified Business
+              </h2>
+              <p className="text-xs text-rc-muted">
+                We found {locations.length} verified {locations.length === 1 ? "location" : "locations"} on your Google account.
+              </p>
+            </div>
+
+            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+              {locations.map((loc) => {
+                const isSelected = selectedLoc?.place_id === loc.place_id;
+                return (
+                  <button
+                    key={loc.place_id}
+                    type="button"
+                    onClick={() => setSelectedLoc(loc)}
+                    disabled={actionLoading}
+                    className={`w-full text-left p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-200 cursor-pointer disabled:opacity-50 ${
+                      isSelected
+                        ? "border-rc-accent bg-rc-accent/5 ring-1 ring-rc-accent"
+                        : "border-rc-border bg-rc-bg/30 hover:border-rc-border-light hover:bg-rc-bg"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-rc-text leading-tight">{loc.name}</span>
+                      <span className="text-[10px] font-bold text-rc-accent bg-rc-accent/15 px-2 py-0.5 rounded border border-rc-accent/25 uppercase shrink-0">
+                        {loc.primary_category || "Business"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs text-rc-muted leading-relaxed">
+                      <MapPin className="h-3.5 w-3.5 text-rc-accent shrink-0" />
+                      <span className="truncate">{loc.address}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2.5">
+              <button
+                onClick={async () => {
+                  if (!selectedLoc) return;
+                  setActionLoading(true);
+                  const toastId = toast.loading(`Connecting your Google Business profile...`);
+                  try {
+                    const res = await fetch("/api/platforms/google/connect", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        locationName: selectedLoc.name,
+                        placeId: selectedLoc.place_id,
+                        locationId: selectedLoc.location_id,
+                        accountId: selectedLoc.account_id,
+                        category: selectedLoc.primary_category,
+                        accessToken: accessTokenParam,
+                        refreshToken: refreshTokenParam,
+                        tokenExpiresAt: tokenExpiresAtParam,
+                      }),
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to connect business");
+
+                    toast.success("Business profile connected successfully!", { id: toastId });
+                    router.push("/platforms");
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to connect Google location", { id: toastId });
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading || !selectedLoc}
+                className="w-full py-3 px-6 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50"
+              >
+                {actionLoading ? "Connecting..." : "Connect This Business"}
+              </button>
+
+              <button
+                onClick={() => {
+                  router.push("/platforms");
+                }}
+                disabled={actionLoading}
+                className="w-full py-2.5 border border-rc-border hover:bg-rc-bg text-xs font-semibold rounded-lg text-rc-text transition-all duration-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 sm:p-10 rounded-2xl border border-rc-border bg-rc-card/50 backdrop-blur-md shadow-2xl text-center space-y-6 animate-fade-in">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-500">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-rc-text">
+                No Verified Business Locations Found
+              </h2>
+              <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
+                We couldn&apos;t find any verified Google Business Profile locations under this account.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-rc-border">
+              <button
+                onClick={() => {
+                  window.location.href = "/api/platforms/google/connect";
+                }}
+                className="w-full py-3 px-6 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/20 cursor-pointer"
+              >
+                Try a different Google Account
+              </button>
+              <button
+                onClick={() => {
+                  router.push("/platforms");
+                }}
+                className="w-full py-3 px-6 rounded-xl border border-rc-border text-rc-text font-semibold text-sm hover:bg-rc-card transition-all duration-200"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -316,139 +378,13 @@ export default function PlatformsPage() {
                     )}
                   </div>
 
-                  {key === "google" && googleSearchActive && !connected ? (
-                    <div className="mt-4 space-y-4 w-full animate-fade-in">
-                      {isMockMode && (
-                        <div className="p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-[10px] text-yellow-400 flex items-start gap-2 leading-relaxed">
-                          <AlertCircle className="h-4 w-4 shrink-0 text-yellow-500" />
-                          <span>Configure Google Places API key to enable real reviews (running in simulation mode)</span>
-                        </div>
-                      )}
-
-                      {/* Step 1: Search Form */}
-                      <form onSubmit={handleGoogleSearch} className="space-y-2.5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-rc-muted" />
-                            <input
-                              type="text"
-                              placeholder="Business Name"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full bg-rc-bg border border-rc-border rounded-lg pl-8 pr-2 py-2 text-xs text-rc-text placeholder:text-rc-muted focus:outline-none focus:border-rc-accent text-ellipsis"
-                            />
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="City"
-                            value={searchCity}
-                            onChange={(e) => setSearchCity(e.target.value)}
-                            className="w-full bg-rc-bg border border-rc-border rounded-lg px-3 py-2 text-xs text-rc-text placeholder:text-rc-muted focus:outline-none focus:border-rc-accent text-ellipsis"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={searching || !searchQuery.trim()}
-                          className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer text-center shrink-0"
-                        >
-                          {searching ? "Searching..." : "Search Google Places"}
-                        </button>
-                      </form>
-
-                      {/* Search Results Dropdown */}
-                      {searchResults.length > 0 && !selectedPlace && (
-                        <div className="space-y-2">
-                          <div className="max-h-40 overflow-y-auto border border-rc-border bg-rc-bg rounded-lg divide-y divide-rc-border/60">
-                            {searchResults.map((place) => (
-                              <button
-                                key={place.id}
-                                type="button"
-                                onClick={() => setSelectedPlace(place)}
-                                className="w-full text-left p-2.5 hover:bg-rc-card/50 transition-colors flex flex-col gap-0.5 cursor-pointer"
-                              >
-                                <div className="flex justify-between items-start w-full gap-2">
-                                  <span className="text-xs font-semibold text-rc-text truncate flex-1">
-                                    {place.displayName?.text || place.displayName}
-                                  </span>
-                                  <span className="text-[9px] px-1.5 py-0.5 bg-rc-border/60 rounded text-rc-accent shrink-0 font-medium">
-                                    {parseCityCountry(place.formattedAddress)}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-rc-muted truncate leading-relaxed">
-                                  {place.formattedAddress}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                          <div className="text-center pt-2 border-t border-rc-border/30 mt-2 animate-fade-in">
-                            <button
-                              type="button"
-                              onClick={() => router.push("/reviews?addManual=true")}
-                              className="text-[11px] text-rc-accent hover:underline font-semibold cursor-pointer"
-                            >
-                              Can't find your business? Add reviews manually
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Step 2: Selected Place Confirmation Card */}
-                      {selectedPlace && (
-                        <div className="p-3 rounded-lg border border-rc-border bg-rc-bg/50 space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-rc-text truncate">
-                                {selectedPlace.displayName?.text || selectedPlace.displayName}
-                              </h4>
-                              <p className="text-[10px] text-rc-muted mt-0.5 leading-relaxed">
-                                {selectedPlace.formattedAddress}
-                              </p>
-                              {selectedPlace.rating && (
-                                <div className="flex items-center gap-1 mt-1.5">
-                                  <span className="text-[10px] text-yellow-500 font-bold">★ {selectedPlace.rating}</span>
-                                  <span className="text-[9px] text-rc-muted">({selectedPlace.userRatingCount || 0} reviews)</span>
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedPlace(null)}
-                              className="text-rc-muted hover:text-rc-text p-0.5 shrink-0 cursor-pointer"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleGoogleConnect}
-                            disabled={connecting}
-                            className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all shadow-md shadow-rc-accent/15 cursor-pointer disabled:opacity-50 shrink-0"
-                          >
-                            {connecting ? "Connecting..." : "Connect This Business"}
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={resetGoogleSearch}
-                          className="text-xs text-rc-muted hover:text-rc-text font-medium cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-rc-muted mt-1 leading-relaxed">
-                      {connected
-                        ? "Connected and actively syncing reviews."
-                        : details.comingSoon
-                        ? "This integration will be available in the next release."
-                        : "Sync reviews directly from Google Business search lists."}
-                    </p>
-                  )}
+                  <p className="text-xs text-rc-muted mt-1 leading-relaxed">
+                    {connected
+                      ? "Connected and actively syncing reviews."
+                      : details.comingSoon
+                      ? "This integration will be available in the next release."
+                      : "Sync reviews directly from Google Business verified profiles."}
+                  </p>
                 </div>
                 <div
                   className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ml-2"
@@ -460,60 +396,58 @@ export default function PlatformsPage() {
                 </div>
               </div>
 
-              {!(key === "google" && googleSearchActive && !connected) && (
-                <div className="mt-8 flex items-center justify-between border-t border-rc-border/50 pt-4">
-                  {connected ? (
-                    <>
-                      <span className="flex items-center gap-1.5 text-xs text-rc-accent font-semibold">
-                        <Check className="h-4 w-4" /> Connected
-                      </span>
-                      <button
-                        onClick={() => handleDisconnect(connected.id)}
-                        className="px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-xs font-semibold text-red-400 transition-all cursor-pointer"
-                      >
-                        Disconnect
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xs text-rc-muted">
-                        {details.comingSoon || isPlatformLimitReached ? (
-                          <span className="flex items-center gap-1">
-                            <Lock className="h-3 w-3" /> Locked
-                          </span>
-                        ) : (
-                          "Not Connected"
-                        )}
-                      </span>
-                      {!details.comingSoon && (
-                        <button
-                          onClick={() => {
-                            if (isPlatformLimitReached) {
-                              toast.error(
-                                `Your ${
-                                  PLANS[plan]?.name || "Free Trial"
-                                } plan is limited to ${
-                                  platformLimit
-                                } platform connection. Upgrade in Settings!`
-                              );
-                              return;
-                            }
-                            handleConnect(key);
-                          }}
-                          disabled={isPlatformLimitReached}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            isPlatformLimitReached
-                              ? "bg-rc-border/50 text-rc-muted cursor-not-allowed opacity-50"
-                              : "bg-rc-accent text-rc-bg hover:bg-rc-accent-hover"
-                          }`}
-                        >
-                          Connect Account
-                        </button>
+              <div className="mt-8 flex items-center justify-between border-t border-rc-border/50 pt-4">
+                {connected ? (
+                  <>
+                    <span className="flex items-center gap-1.5 text-xs text-rc-accent font-semibold">
+                      <Check className="h-4 w-4" /> Connected
+                    </span>
+                    <button
+                      onClick={() => handleDisconnect(connected.id)}
+                      className="px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-xs font-semibold text-red-400 transition-all cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs text-rc-muted">
+                      {details.comingSoon || isPlatformLimitReached ? (
+                        <span className="flex items-center gap-1">
+                          <Lock className="h-3 w-3" /> Locked
+                        </span>
+                      ) : (
+                        "Not Connected"
                       )}
-                    </>
-                  )}
-                </div>
-              )}
+                    </span>
+                    {!details.comingSoon && (
+                      <button
+                        onClick={() => {
+                          if (isPlatformLimitReached) {
+                            toast.error(
+                              `Your ${
+                                PLANS[plan]?.name || "Free Trial"
+                              } plan is limited to ${
+                                platformLimit
+                              } platform connection. Upgrade in Settings!`
+                            );
+                            return;
+                          }
+                          handleConnect(key);
+                        }}
+                        disabled={isPlatformLimitReached}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isPlatformLimitReached
+                            ? "bg-rc-border/50 text-rc-muted cursor-not-allowed opacity-50"
+                            : "bg-rc-accent text-rc-bg hover:bg-rc-accent-hover"
+                        }`}
+                      >
+                        Connect Account
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           );
         })}

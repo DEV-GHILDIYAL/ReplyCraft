@@ -38,14 +38,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
       }
 
-      // Check if user has an existing business profile
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const nextPath = business ? "/dashboard" : "/onboarding";
+      const nextPath = "/dashboard";
 
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";

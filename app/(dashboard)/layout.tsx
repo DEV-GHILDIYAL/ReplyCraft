@@ -131,20 +131,13 @@ export default function DashboardLayout({
         }
 
         if (!biz) {
-          // If no business and not on onboarding, redirect to onboarding
-          if (pathname !== "/onboarding") {
-            router.push("/onboarding");
-          }
+          setBusiness(null);
         } else {
           const mappedBiz = {
             ...biz,
             plan: (biz.plan === "free" ? "trial" : biz.plan) as "trial" | "starter" | "growth" | "scale",
           };
           setBusiness(mappedBiz);
-          // If on onboarding but business exists, go to dashboard
-          if (pathname === "/onboarding") {
-            router.push("/dashboard");
-          }
           // Route guard for Sentiment page
           if (mappedBiz.plan === "starter" && pathname === "/sentiment") {
             toast.error("Upgrade to Growth plan to access Sentiment Analytics");

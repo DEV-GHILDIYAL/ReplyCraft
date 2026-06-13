@@ -104,6 +104,31 @@ export default function DashboardPage() {
     );
   }
 
+  if (data?.error === "Business profile not found" || (data && !data.business)) {
+    return (
+      <div className="p-6 lg:p-8 max-w-xl mx-auto mt-20 text-center space-y-6">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
+          <Sparkles className="h-8 w-8 animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-rc-text">
+            Welcome! Connect your Google Business Profile to start syncing reviews
+          </h2>
+          <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
+            ReplyCraft links directly with Google Business Profile to retrieve and sync your reviews, enabling automated and AI-drafted replies in real-time.
+          </p>
+        </div>
+        <Link
+          href="/platforms"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15"
+        >
+          Connect Google Business Profile
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
+
   if (error || !data || data.error) {
     return (
       <div className="p-6 lg:p-8 text-center max-w-md mx-auto mt-20">

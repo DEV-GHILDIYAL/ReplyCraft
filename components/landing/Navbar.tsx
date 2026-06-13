@@ -7,12 +7,14 @@ import { createClient } from "@/lib/supabase";
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
     async function checkAuth() {
       const { data: { user } } = await supabase.auth.getUser();
       setIsLoggedIn(!!user);
+      setAuthChecked(true);
     }
     checkAuth();
 
@@ -23,6 +25,7 @@ export default function Navbar() {
         } else if (event === 'SIGNED_IN' && session) {
           setIsLoggedIn(true);
         }
+        setAuthChecked(true);
       }
     );
 
@@ -67,7 +70,9 @@ export default function Navbar() {
 
           {/* Desktop Auth / Action */}
           <div className="hidden md:flex items-center gap-3">
-            {isLoggedIn ? (
+            {!authChecked ? (
+              <div className="w-32 h-9" />
+            ) : isLoggedIn ? (
               <Link
                 href="/dashboard"
                 className="text-sm font-medium bg-rc-accent text-rc-bg px-5 py-2 rounded-lg hover:bg-rc-accent-hover transition-colors"
@@ -136,7 +141,9 @@ export default function Navbar() {
                 Pricing
               </a>
               <div className="border-t border-rc-border pt-3 mt-1 flex flex-col gap-2">
-                {isLoggedIn ? (
+                {!authChecked ? (
+                  <div className="h-9" />
+                ) : isLoggedIn ? (
                   <Link
                     href="/dashboard"
                     className="text-sm font-medium bg-rc-accent text-rc-bg px-4 py-2.5 rounded-lg text-center hover:bg-rc-accent-hover transition-colors"
