@@ -125,6 +125,13 @@ const MOCK_REVIEWS = [
 ];
 
 export async function POST() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'This endpoint is disabled in production' },
+      { status: 403 }
+    )
+  }
+
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json(
       { error: "Seeding mock data is not permitted in production environments." },

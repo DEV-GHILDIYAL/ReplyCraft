@@ -72,13 +72,9 @@ function generateDraftHeuristically(
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const authHeader = request.headers.get("Authorization");
-    const token = authHeader?.split("Bearer ")?.[1] || searchParams.get("secret");
-    const secret = process.env.CRON_SECRET;
-
-    if (secret && secret !== "your-cron-secret-key" && token !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const authHeader = request.headers.get('authorization')
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Initialize admin client to run server-wide checks
