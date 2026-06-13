@@ -80,7 +80,7 @@ export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [plan, setPlan] = useState<PlanType>("free");
+  const [plan, setPlan] = useState<PlanType>("trial");
 
   // Google Places search / connect states
   const [googleSearchActive, setGoogleSearchActive] = useState(false);
@@ -112,7 +112,7 @@ export default function PlatformsPage() {
 
     if (biz) {
       setBusinessId(biz.id);
-      setPlan((biz.plan as PlanType) || "free");
+      setPlan((biz.plan as string) === "free" ? "trial" : (biz.plan as PlanType) || "trial");
       const { data: plats } = await supabase
         .from("platforms")
         .select("*")
@@ -491,7 +491,7 @@ export default function PlatformsPage() {
                             if (isPlatformLimitReached) {
                               toast.error(
                                 `Your ${
-                                  PLANS[plan]?.name || "Free"
+                                  PLANS[plan]?.name || "Free Trial"
                                 } plan is limited to ${
                                   platformLimit
                                 } platform connection. Upgrade in Settings!`

@@ -7,6 +7,7 @@ import useSWR from "swr";
 import Script from "next/script";
 import { Settings, Shield, User, CreditCard, Sparkles, Check, CheckCircle2 } from "lucide-react";
 import { PLANS } from "@/types";
+import { isTrialExpired } from "@/lib/plans";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +26,7 @@ export default function SettingsPage() {
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
+  const [trialStartedAt, setTrialStartedAt] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,9 +47,10 @@ export default function SettingsPage() {
       setBusinessId(biz.id);
       setBusinessName(biz.name);
       setCategory(biz.category || "");
-      setPlan(biz.plan);
+      setPlan(biz.plan === "free" ? "trial" : biz.plan);
       setPlanExpiresAt(biz.plan_expires_at);
       setAutoReplyEnabled(biz.auto_reply_enabled || false);
+      setTrialStartedAt(biz.trial_started_at || biz.created_at);
     }
     setLoading(false);
   };
@@ -175,6 +178,30 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-rc-text">Settings</h1>
       </div>
 
+      {/* Trial Countdown Banner */}
+      {plan === "trial" && (() => {
+        const start = trialStartedAt ? new Date(trialStartedAt) : new Date();
+        const now = new Date();
+        const diffDays = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+        const daysLeft = Math.max(0, Math.ceil(7 - diffDays));
+        return daysLeft > 0 ? (
+          <div className="mb-6 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 flex items-center justify-between animate-fade-in">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
+              <span className="text-sm font-semibold">
+                You are on the Free Trial. {daysLeft} {daysLeft === 1 ? "day" : "days"} left in your trial.
+              </span>
+            </div>
+            <button
+              onClick={() => setActiveTab("billing")}
+              className="px-3 py-1.5 rounded-lg bg-yellow-500 text-rc-bg text-xs font-bold hover:bg-yellow-400 transition-all cursor-pointer"
+            >
+              Upgrade Now
+            </button>
+          </div>
+        ) : null;
+      })()}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Navigation Sidebar */}
         <div className="space-y-2">
@@ -262,7 +289,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="relative flex items-center shrink-0">
-                    {(plan === "growth" || plan === "scale") ? (
+                    {(plan === "starter" || plan === "growth" || plan === "scale") ? (
                       <button
                         type="button"
                         onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
@@ -272,7 +299,7 @@ export default function SettingsPage() {
                       >
                         <span className={`w-4 h-4 rounded-full bg-rc-bg absolute top-1 transition-all ${
                           autoReplyEnabled ? "left-6" : "left-1"
-                        }`} />
+                         }`} />
                       </button>
                     ) : (
                       <div className="flex flex-col items-end gap-1.5">
@@ -284,7 +311,7 @@ export default function SettingsPage() {
                           <span className="w-4 h-4 rounded-full bg-rc-bg absolute top-1 left-1" />
                         </button>
                         <span className="text-[10px] text-yellow-500 font-semibold bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
-                          Upgrade to Growth
+                          Upgrade to Paid Plan
                         </span>
                       </div>
                     )}
@@ -312,7 +339,7 @@ export default function SettingsPage() {
                     {plan}
                   </span>
                 </span>
-                {plan !== "free" && planExpiresAt && (
+                {plan !== "trial" && planExpiresAt && (
                   <span className="text-xs text-rc-muted">
                     Renews on: {new Date(planExpiresAt).toLocaleDateString()}
                   </span>
@@ -326,7 +353,7 @@ export default function SettingsPage() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {(Object.keys(PLANS) as Array<keyof typeof PLANS>)
-                    .filter((key) => key !== "free")
+                    .filter((key) => (key as string) !== "free" && key !== "trial")
                     .map((key) => {
                       const item = PLANS[key];
                       const isActive = plan === key;
@@ -446,6 +473,84 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Trial Expired Hard Paywall Overlay */}
+      {plan === "trial" && (() => {
+        const start = trialStartedAt ? new Date(trialStartedAt) : new Date();
+        const now = new Date();
+        const diffDays = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+        const expired = diffDays > 7;
+        return expired ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-rc-bg/95 backdrop-blur-md overflow-y-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+            <div className="max-w-4xl w-full bg-rc-card border border-rc-border rounded-2xl p-6 sm:p-8 md:p-10 shadow-2xl relative">
+              <div className="text-center max-w-2xl mx-auto mb-10">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-500 mb-4">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-rc-text">
+                  Your Free Trial Has Expired
+                </h2>
+                <p className="mt-3 text-sm text-rc-muted leading-relaxed">
+                  Your 7-day free trial has come to an end. To continue syncing customer reviews, generating AI drafts, and using auto-publish rules, please select a paid plan below.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {(Object.keys(PLANS) as Array<keyof typeof PLANS>)
+                  .filter((key) => (key as string) !== "free" && key !== "trial")
+                  .map((key) => {
+                    const item = PLANS[key];
+                    const isPopular = key === "growth";
+
+                    return (
+                      <div
+                        key={key}
+                        className={`p-6 rounded-xl border flex flex-col justify-between hover:border-rc-border-light transition-all relative ${
+                          isPopular
+                            ? "border-rc-accent bg-rc-accent/5 ring-1 ring-rc-accent shadow-lg shadow-rc-accent/5"
+                            : "border-rc-border bg-rc-bg/50"
+                        }`}
+                      >
+                        {isPopular && (
+                          <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-rc-accent text-rc-bg text-[10px] font-bold tracking-wide uppercase shadow-sm">
+                            Most Popular
+                          </span>
+                        )}
+                        <div>
+                          <h4 className="text-sm font-bold text-rc-text capitalize">{item.name}</h4>
+                          <div className="mt-2 flex items-baseline">
+                            <span className="text-xl font-extrabold text-rc-text">
+                              {item.priceDisplay}
+                            </span>
+                            <span className="text-[10px] text-rc-muted ml-1">/month</span>
+                          </div>
+                          <ul className="mt-4 space-y-2 text-[11px] text-rc-muted">
+                            {item.features.map((feat, i) => (
+                              <li key={i} className="flex items-center gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-rc-accent shrink-0" />
+                                <span>{feat}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="mt-6">
+                          <button
+                            onClick={() => handleUpgrade(key as "starter" | "growth" | "scale")}
+                            disabled={upgradingPlan !== null}
+                            className="w-full py-2 rounded-lg bg-rc-accent text-rc-bg text-xs font-bold hover:bg-rc-accent-hover transition-all disabled:opacity-50 cursor-pointer"
+                          >
+                            {upgradingPlan === key ? "Processing..." : `Upgrade to ${item.name}`}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }

@@ -23,7 +23,7 @@ import { toast } from "react-hot-toast";
 interface Business {
   id: string;
   name: string;
-  plan: "free" | "starter" | "growth" | "scale";
+  plan: "trial" | "starter" | "growth" | "scale";
 }
 
 export default function DashboardLayout({
@@ -136,13 +136,17 @@ export default function DashboardLayout({
             router.push("/onboarding");
           }
         } else {
-          setBusiness(biz);
+          const mappedBiz = {
+            ...biz,
+            plan: (biz.plan === "free" ? "trial" : biz.plan) as "trial" | "starter" | "growth" | "scale",
+          };
+          setBusiness(mappedBiz);
           // If on onboarding but business exists, go to dashboard
           if (pathname === "/onboarding") {
             router.push("/dashboard");
           }
           // Route guard for Sentiment page
-          if ((biz.plan === "free" || biz.plan === "starter") && pathname === "/sentiment") {
+          if (mappedBiz.plan === "starter" && pathname === "/sentiment") {
             toast.error("Upgrade to Growth plan to access Sentiment Analytics");
             router.push("/settings");
             return;
@@ -233,7 +237,7 @@ export default function DashboardLayout({
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            const isLocked = item.name === "Sentiment" && business && (business.plan === "free" || business.plan === "starter");
+            const isLocked = item.name === "Sentiment" && business && business.plan === "starter";
 
             return (
               <Link
@@ -299,7 +303,7 @@ export default function DashboardLayout({
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
-                  const isLocked = item.name === "Sentiment" && business && (business.plan === "free" || business.plan === "starter");
+                  const isLocked = item.name === "Sentiment" && business && business.plan === "starter";
 
                   return (
                     <Link
@@ -365,7 +369,7 @@ export default function DashboardLayout({
                   {business.name}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  business.plan === "free"
+                  business.plan === "trial"
                     ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
                     : business.plan === "starter"
                     ? "bg-green-500/15 text-green-400 border border-green-500/30"

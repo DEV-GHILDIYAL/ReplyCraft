@@ -17,7 +17,7 @@ export const getRazorpayInstance = () => {
 };
 
 export const PLANS_PRICES = {
-  free: 0,
+  trial: 0,
   starter: 499,
   growth: 999,
   scale: 2499,

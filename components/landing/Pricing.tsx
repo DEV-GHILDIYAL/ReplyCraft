@@ -9,8 +9,9 @@ export default function Pricing() {
       description: "Perfect for single-location businesses getting started.",
       features: [
         "1 location",
-        "1 platform connection",
-        "100 AI responses/mo",
+        "Unlimited platform connections",
+        "50 AI drafts/month",
+        "Auto-publish AI replies",
         "Manual review input",
         "Email support",
       ],
@@ -24,10 +25,10 @@ export default function Pricing() {
       description: "For growing businesses that need more power & auto replies.",
       features: [
         "3 locations",
-        "3 platform connections",
-        "500 AI responses/mo",
-        "Manual review input",
+        "Unlimited platform connections",
+        "200 AI drafts/month",
         "Auto-publish AI replies",
+        "Manual review input",
         "Priority support",
       ],
       cta: "Get Started",
@@ -39,14 +40,12 @@ export default function Pricing() {
       period: "/mo",
       description: "For scale operations requiring premium reputation features.",
       features: [
-        "Unlimited locations",
+        "10 locations",
         "Unlimited platform connections",
-        "Unlimited AI responses",
-        "Manual review input",
+        "1000 AI drafts/month",
         "Auto-publish AI replies",
         "Sentiment analytics",
         "Dedicated support",
-        "White label option",
       ],
       cta: "Get Started",
       popular: false,
@@ -70,7 +69,7 @@ export default function Pricing() {
             Simple, Transparent Pricing
           </h2>
           <p className="mt-4 text-lg text-rc-muted max-w-2xl mx-auto">
-            Start free for 14 days. No credit card required. Upgrade when you&apos;re ready.
+            Start free with our 7-day trial. No credit card required. Upgrade when you&apos;re ready.
           </p>
         </div>
 
@@ -95,9 +94,14 @@ export default function Pricing() {
 
               {/* Plan header */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-rc-text">
-                  {plan.name}
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-rc-text">
+                    {plan.name}
+                  </h3>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rc-accent/15 text-rc-accent border border-rc-accent/25 uppercase tracking-wider">
+                    7-day trial
+                  </span>
+                </div>
                 <p className="text-sm text-rc-muted mt-1">{plan.description}</p>
               </div>
 

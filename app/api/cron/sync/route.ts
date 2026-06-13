@@ -3,6 +3,7 @@ import { getGroqClient } from "@/lib/groq";
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { Tone } from "@/types";
+import { isTrialExpired, getDraftLimit } from "@/lib/plans";
 
 // Reusable sentiment logic (from sentiment API)
 const POSITIVE_WORDS = ["good", "great", "excellent", "love", "friendly", "best", "perfect", "delicious", "amazing", "happy", "recommend"];
@@ -101,6 +102,38 @@ export async function GET(request: Request) {
     const report: any[] = [];
 
     for (const biz of businesses) {
+      // 1. Quota & Trial Check
+      if (biz.plan === "trial" && isTrialExpired(biz.trial_started_at)) {
+        console.log(`Skipping sync for business ${biz.name} - trial expired`);
+        continue;
+      }
+
+      let currentUsed = biz.ai_drafts_used || 0;
+      const limit = getDraftLimit(biz.plan);
+
+      if (biz.plan !== "trial") {
+        const resetAt = new Date(biz.ai_drafts_reset_at || new Date());
+        const now = new Date();
+        const diffMs = now.getTime() - resetAt.getTime();
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+        if (diffDays >= 30) {
+          currentUsed = 0;
+          await supabase
+            .from("businesses")
+            .update({
+              ai_drafts_used: 0,
+              ai_drafts_reset_at: now.toISOString(),
+            })
+            .eq("id", biz.id);
+        }
+
+        if (currentUsed >= limit) {
+          console.log(`Skipping sync for business ${biz.name} - draft limit reached (${currentUsed}/${limit})`);
+          continue;
+        }
+      }
+
       // Find reviews for this business that have not been classified or drafted yet
       const { data: unprocessedReviews } = await supabase
         .from("reviews")
@@ -117,8 +150,16 @@ export async function GET(request: Request) {
       let positiveCount = 0;
       let neutralCount = 0;
       let negativeCount = 0;
+      let processedCount = 0;
+      let draftsGenerated = 0;
 
       for (const review of unprocessed) {
+        // Enforce quota limit inside loop if not on trial
+        if (biz.plan !== "trial" && currentUsed >= limit) {
+          console.log(`Business ${biz.name} reached quota limit during cron processing`);
+          break;
+        }
+
         let sentiment = "neutral";
         let score = 0.5;
         let keywords: string[] = [];
@@ -256,7 +297,7 @@ CRITICAL RULES:
           }
         }
 
-        const isAutoReply = biz.auto_reply_enabled && (biz.plan === "growth" || biz.plan === "scale");
+        const isAutoReply = biz.auto_reply_enabled && (biz.plan === "starter" || biz.plan === "growth" || biz.plan === "scale");
 
         // Insert draft
         await supabase.from("response_drafts").insert({
@@ -267,6 +308,11 @@ CRITICAL RULES:
           status: isAutoReply ? "published" : "pending",
           tone: defaultTone,
         });
+
+        // Increment drafts generated
+        currentUsed++;
+        draftsGenerated++;
+        processedCount++;
 
         // If Auto-Reply, update the review record directly to responded
         if (isAutoReply) {
@@ -281,6 +327,18 @@ CRITICAL RULES:
         }
       }
 
+      if (processedCount === 0) {
+        continue;
+      }
+
+      // Persist the updated drafts limit count
+      await supabase
+        .from("businesses")
+        .update({
+          ai_drafts_used: currentUsed,
+        })
+        .eq("id", biz.id);
+
       // 3. Email Notification to Business Owner
       // Fetch user profile email using supabase admin
       const { data: authUser } = await supabase.auth.admin.getUserById(biz.user_id);
@@ -288,7 +346,7 @@ CRITICAL RULES:
 
       if (ownerEmail) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const emailSubject = `ReplyDesk: ${unprocessed.length} new reviews need your attention`;
+        const emailSubject = `ReplyDesk: ${processedCount} new reviews need your attention`;
         const emailHtml = `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #0a0f1e; color: #f1f5f9; border-radius: 12px; border: 1px solid #1e293b;">
             <div style="text-align: center; margin-bottom: 24px;">
@@ -297,7 +355,7 @@ CRITICAL RULES:
             </div>
             
             <p style="font-size: 16px; line-height: 1.6; color: #f1f5f9;">
-              Hi there, we successfully imported <strong>${unprocessed.length} new review(s)</strong> for your business, <strong>${biz.name}</strong>.
+              Hi there, we successfully imported <strong>${processedCount} new review(s)</strong> for your business, <strong>${biz.name}</strong>.
             </p>
 
             <div style="background: #111827; padding: 16px; border-radius: 8px; margin: 24px 0; border: 1px solid #1e293b; text-align: center;">
@@ -343,13 +401,13 @@ CRITICAL RULES:
         } else {
           console.log(`[Resend Email Simulation] Sent email notification to ${ownerEmail}:`);
           console.log(`Subject: ${emailSubject}`);
-          console.log(`Summary: Total ${unprocessed.length} (Pos: ${positiveCount}, Neg: ${negativeCount})`);
+          console.log(`Summary: Total ${processedCount} (Pos: ${positiveCount}, Neg: ${negativeCount})`);
         }
       }
 
       report.push({
         business: biz.name,
-        processed: unprocessed.length,
+        processed: processedCount,
         positive: positiveCount,
         neutral: neutralCount,
         negative: negativeCount,

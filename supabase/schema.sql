@@ -36,6 +36,10 @@ CREATE TABLE platforms (
   platform_id TEXT,
   place_id TEXT,
   api_key TEXT,
+  access_token TEXT,
+  refresh_token TEXT,
+  token_expires_at TIMESTAMPTZ,
+  account_id TEXT,
   last_synced_at TIMESTAMPTZ,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { getGroqClient } from "@/lib/groq";
 import { NextResponse } from "next/server";
 import { Tone } from "@/types";
+import { isTrialExpired, getDraftLimit } from "@/lib/plans";
 
 function generateDraftHeuristically(
   reviewText: string,
@@ -79,12 +80,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch business name
-    const { data: business } = await supabase
+    // Fetch business details
+    const { data: business, error: bizErr } = await supabase
       .from("businesses")
-      .select("name")
+      .select("id, name, plan, trial_started_at, ai_drafts_used, ai_drafts_reset_at")
       .eq("id", review.business_id)
       .maybeSingle();
+
+    if (bizErr || !business) {
+      return NextResponse.json(
+        { error: "Business profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // 1. Check Free Trial expiration
+    if (business.plan === "trial" && isTrialExpired(business.trial_started_at)) {
+      return NextResponse.json(
+        { error: "trial_expired", message: "Your 7-day trial has ended. Please upgrade to continue." },
+        { status: 403 }
+      );
+    }
+
+    let currentUsed = business.ai_drafts_used || 0;
+
+    // 2. Check Plan Quota limit (if not on trial)
+    if (business.plan !== "trial") {
+      const resetAt = new Date(business.ai_drafts_reset_at || new Date());
+      const now = new Date();
+      const diffMs = now.getTime() - resetAt.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+      if (diffDays >= 30) {
+        currentUsed = 0;
+        await supabase
+          .from("businesses")
+          .update({
+            ai_drafts_used: 0,
+            ai_drafts_reset_at: now.toISOString(),
+          })
+          .eq("id", business.id);
+      }
+
+      if (currentUsed >= getDraftLimit(business.plan)) {
+        return NextResponse.json(
+          { error: "limit_exceeded", plan: business.plan, limit: getDraftLimit(business.plan) },
+          { status: 429 }
+        );
+      }
+    }
 
     const businessName = business?.name || "our team";
 
@@ -185,6 +229,14 @@ CRITICAL RULES:
     if (draftError) {
       throw draftError;
     }
+
+    // Update business used quota count
+    await supabase
+      .from("businesses")
+      .update({
+        ai_drafts_used: currentUsed + 1,
+      })
+      .eq("id", business.id);
 
     // Create notification for AI draft ready
     const reviewerLabel = review.reviewer_name || "Anonymous";

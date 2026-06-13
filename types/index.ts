@@ -4,7 +4,7 @@
 
 // --- Enum Types ---
 
-export type PlanType = "free" | "starter" | "growth" | "scale";
+export type PlanType = "trial" | "starter" | "growth" | "scale";
 
 export type Sentiment = "positive" | "neutral" | "negative";
 
@@ -45,6 +45,9 @@ export interface Business {
   plan: PlanType;
   plan_expires_at: string | null;
   razorpay_customer_id: string | null;
+  trial_started_at: string | null;
+  ai_drafts_used: number | null;
+  ai_drafts_reset_at: string | null;
   created_at: string;
 }
 
@@ -128,20 +131,19 @@ export interface PlanConfig {
 }
 
 export const PLANS: Record<PlanType, PlanConfig> = {
-  free: {
-    name: "Free",
+  trial: {
+    name: "Free Trial",
     price: 0,
-    priceDisplay: "₹0",
+    priceDisplay: "Free",
     features: [
-      "1 location",
-      "1 platform connection",
-      "50 AI responses/mo",
-      "Basic dashboard",
+      "All features",
+      "Unlimited platform connections",
+      "Unlimited AI drafts (7 days)",
     ],
     limits: {
-      locations: 1,
-      platforms: 1,
-      responsesPerMonth: 50,
+      locations: 10,
+      platforms: "unlimited",
+      responsesPerMonth: "unlimited",
     },
   },
   starter: {
@@ -149,15 +151,14 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 49900,
     priceDisplay: "₹499",
     features: [
-      "1 platform connection",
-      "100 AI replies/month",
-      "Manual review input",
-      "Email support",
+      "All features",
+      "50 AI replies/month",
+      "Auto-publish replies",
     ],
     limits: {
       locations: 1,
-      platforms: 1,
-      responsesPerMonth: 100,
+      platforms: "unlimited",
+      responsesPerMonth: 50,
     },
   },
   growth: {
@@ -165,16 +166,14 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 99900,
     priceDisplay: "₹999",
     features: [
-      "3 platform connections",
-      "500 AI replies/month",
-      "Manual review input",
-      "Auto-publish AI replies",
-      "Priority support",
+      "All features",
+      "200 AI replies/month",
+      "Auto-publish replies",
     ],
     limits: {
       locations: 3,
-      platforms: 3,
-      responsesPerMonth: 500,
+      platforms: "unlimited",
+      responsesPerMonth: 200,
     },
   },
   scale: {
@@ -182,18 +181,14 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 249900,
     priceDisplay: "₹2,499",
     features: [
-      "Unlimited platform connections",
-      "Unlimited AI replies",
-      "Manual review input",
-      "Auto-publish AI replies",
-      "Sentiment analytics",
-      "Dedicated support",
-      "White label option",
+      "All features",
+      "1000 AI replies/month",
+      "Auto-publish replies",
     ],
     limits: {
       locations: 10,
       platforms: "unlimited",
-      responsesPerMonth: "unlimited",
+      responsesPerMonth: 1000,
     },
   },
 };

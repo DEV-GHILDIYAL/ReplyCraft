@@ -138,6 +138,8 @@ export async function POST(request: Request) {
         .update({
           plan: paymentRecord.plan,
           plan_expires_at: expiryDate.toISOString(),
+          ai_drafts_used: 0,
+          ai_drafts_reset_at: new Date().toISOString(),
         })
         .eq("id", paymentRecord.business_id);
 
