@@ -1,243 +1,468 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { Shield, Sparkles, AlertTriangle, ArrowRight, Building, MapPin, CheckCircle2 } from "lucide-react";
+import {
+  Sparkles,
+  Building,
+  Target,
+  AlertCircle,
+  Volume2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+} from "lucide-react";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const supabase = createClient();
 
-  const stepParam = searchParams.get("step");
-  const locationsParam = searchParams.get("locations");
-  const accessTokenParam = searchParams.get("access_token");
-  const refreshTokenParam = searchParams.get("refresh_token");
-  const tokenExpiresAtParam = searchParams.get("token_expires_at");
-  const errorParam = searchParams.get("error");
-
+  // Wizard state
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [selectedLoc, setSelectedLoc] = useState<any | null>(null);
 
-  // Parse locations if available from GMB OAuth callback
-  useEffect(() => {
-    if (locationsParam) {
-      try {
-        const decoded = JSON.parse(locationsParam);
-        setLocations(decoded);
-      } catch (e) {
-        console.error("Failed to parse locations from query param:", e);
-        toast.error("Failed to load Google locations.");
+  // Form fields state
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState("");
+  const [website, setWebsite] = useState("");
+  const [goal, setGoal] = useState("");
+  const [challenge, setChallenge] = useState("");
+  const [tone, setTone] = useState("");
+  const [reviewVolume, setReviewVolume] = useState("");
+
+  const categories = [
+    "Restaurant",
+    "Salon",
+    "Clinic",
+    "Hotel",
+    "Retail Store",
+    "Cafe",
+    "Gym",
+    "Spa",
+    "Other",
+  ];
+
+  const goals = [
+    { id: "Get more reviews", label: "Get more reviews", emoji: "🎯", desc: "Increase search ranking and gain reputation" },
+    { id: "Improve my rating", label: "Improve my rating", emoji: "⭐", desc: "Build stellar ratings and consumer trust" },
+    { id: "Respond faster", label: "Respond faster", emoji: "⚡", desc: "Save time draft-replying instantly with AI" },
+    { id: "Look more professional", label: "Look more professional", emoji: "💼", desc: "Engage customers with brand-focused text" },
+  ];
+
+  const challenges = [
+    { id: "Not enough reviews", label: "Not enough reviews", emoji: "📉", desc: "Struggling to get customers to write reviews" },
+    { id: "Negative reviews hurting us", label: "Negative reviews hurting us", emoji: "😤", desc: "Bad feedback ranks us lower in local searches" },
+    { id: "No time to respond", label: "No time to respond", emoji: "⏰", desc: "Busy running operations day-to-day" },
+    { id: "Don't know what to write", label: "Don't know what to write", emoji: "✍️", desc: "Unsure of how to frame diplomatic responses" },
+  ];
+
+  const tones = [
+    { id: "Professional", label: "Professional", emoji: "🤝", desc: "Clear and business-like responses" },
+    { id: "Friendly", label: "Friendly", emoji: "😊", desc: "Warm and personable replies" },
+    { id: "Apologetic", label: "Apologetic", emoji: "🙏", desc: "Empathetic and understanding drafts" },
+    { id: "Formal", label: "Formal", emoji: "📋", desc: "Structured and official branding" },
+  ];
+
+  const volumes = [
+    { id: "1-10", label: "1-10 reviews/mo", emoji: "💬" },
+    { id: "11-50", label: "11-50 reviews/mo", emoji: "📈" },
+    { id: "51-200", label: "51-200 reviews/mo", emoji: "🚀" },
+    { id: "200+", label: "200+ reviews/mo", emoji: "🔥" },
+  ];
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (!businessName.trim()) {
+        toast.error("Please enter your business name.");
+        return;
+      }
+      if (!category) {
+        toast.error("Please select a business category.");
+        return;
+      }
+    } else if (step === 2) {
+      if (!goal) {
+        toast.error("Please select your main goal.");
+        return;
+      }
+      if (!challenge) {
+        toast.error("Please select your biggest challenge.");
+        return;
       }
     }
-  }, [locationsParam]);
-
-  // Display OAuth or integration errors if present
-  useEffect(() => {
-    if (errorParam) {
-      if (errorParam === "google_auth_failed") {
-        toast.error("Google authentication failed. Please try again.");
-      } else {
-        toast.error("A system error occurred. Please try again.");
-      }
-    }
-  }, [errorParam]);
-
-  // Determine current step based on OAuth redirect query params
-  const currentStep = stepParam === "select-location" ? 2 : 1;
-
-  const handleConnectGoogle = () => {
-    setLoading(true);
-    window.location.href = "/api/platforms/google/connect";
+    setStep((prev) => prev + 1);
   };
 
-  const handleSelectLocation = async (loc: any) => {
-    setSelectedLoc(loc);
+  const handleBack = () => {
+    setStep((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleSubmit = async () => {
+    if (!tone) {
+      toast.error("Please select a preferred tone.");
+      return;
+    }
+    if (!reviewVolume) {
+      toast.error("Please select your monthly review volume.");
+      return;
+    }
+
     setLoading(true);
-    const toastId = toast.loading(`Connecting your Google Business profile...`);
+    const toastId = toast.loading("Saving your business preferences...");
+
     try {
-      const res = await fetch("/api/platforms/google/connect", {
+      const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          locationName: loc.name,
-          placeId: loc.place_id,
-          locationId: loc.location_id,
-          accountId: loc.account_id,
-          category: loc.primary_category,
-          accessToken: accessTokenParam,
-          refreshToken: refreshTokenParam,
-          tokenExpiresAt: tokenExpiresAtParam,
+          businessName,
+          category,
+          website,
+          goal,
+          challenge,
+          tone,
+          reviewVolume,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to connect business");
+      if (!res.ok) throw new Error(data.error || "Failed to save onboarding settings");
 
-      toast.success("Business profile created successfully!", { id: toastId });
-      router.push("/dashboard");
+      toast.success("Profile created successfully!", { id: toastId });
+      setStep(4); // Advance to final success screen
     } catch (err: any) {
-      toast.error(err.message || "Failed to connect Google location", { id: toastId });
+      toast.error(err.message || "An error occurred.", { id: toastId });
+    } finally {
       setLoading(false);
     }
   };
 
+  const handleGoToDashboard = () => {
+    // Force a complete refresh and redirect to guarantee the layout re-fetches the database business record.
+    window.location.href = "/dashboard";
+  };
+
+  // Progress percentage logic
+  const progressPercent = step === 1 ? 33 : step === 2 ? 66 : 100;
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-rc-bg relative overflow-hidden">
+    <div className="min-h-screen bg-rc-bg text-rc-text flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background glow animations */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-rc-accent/5 blur-[120px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-rc-accent/5 blur-[150px] animate-pulse-glow" />
       </div>
 
-      <div className="w-full max-w-xl relative z-10">
-        {/* Step 1: Connect Google Profile */}
-        {currentStep === 1 && (
-          <div className="p-6 sm:p-10 rounded-2xl border border-rc-border bg-rc-card/50 backdrop-blur-md shadow-2xl space-y-8 animate-fade-in text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
-              <Building className="h-7 w-7" />
-            </div>
+      <div className="w-full max-w-2xl relative z-10 space-y-8">
+        {/* ReplyDesk Header Logo */}
+        <div className="text-center flex flex-col items-center gap-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rc-accent/10 border border-rc-accent/20">
+            <img src="/favicon.svg" alt="ReplyDesk Logo" className="h-7 w-7" />
+          </div>
+          <span className="text-xl font-bold tracking-tight">
+            Reply<span className="text-rc-accent">Desk</span>
+          </span>
+        </div>
 
-            <div className="space-y-3">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-rc-text">
-                Welcome to Reply<span className="text-rc-accent">Craft</span>
-              </h2>
-              <p className="text-sm text-rc-muted max-w-md mx-auto leading-relaxed">
-                Connect your Google Business Profile to get started. We will verify your location to sync reviews and draft AI responses.
-              </p>
+        {/* Progress Bar (Only show on wizard steps 1-3) */}
+        {step < 4 && (
+          <div className="space-y-2.5">
+            <div className="flex justify-between text-xs font-semibold text-rc-muted tracking-wider uppercase">
+              <span>Step {step} of 3</span>
+              <span>{progressPercent}% Complete</span>
             </div>
-
-            <div className="p-4 rounded-xl border border-rc-border bg-rc-bg/40 text-left space-y-3">
-              <div className="flex gap-3 text-xs text-rc-muted">
-                <CheckCircle2 className="h-4 w-4 text-rc-accent shrink-0 mt-0.5" />
-                <span>Only verified locations from your Google account will be imported.</span>
-              </div>
-              <div className="flex gap-3 text-xs text-rc-muted">
-                <CheckCircle2 className="h-4 w-4 text-rc-accent shrink-0 mt-0.5" />
-                <span>Zero manual entry required — category and address sync automatically.</span>
-              </div>
+            <div className="h-2 w-full bg-rc-border rounded-full overflow-hidden">
+              <div
+                className="h-full bg-rc-accent transition-all duration-500 rounded-full shadow-[0_0_10px_#00d4aa]"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
-
-            <button
-              onClick={handleConnectGoogle}
-              disabled={loading}
-              className="w-full py-3.5 px-6 rounded-xl bg-white text-gray-900 font-bold text-sm hover:bg-gray-100 transition-all duration-200 shadow-lg flex items-center justify-center cursor-pointer disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="text-gray-700">Redirecting to Google...</span>
-              ) : (
-                <>
-                  <svg className="h-5 w-5 mr-3 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.82 21.56,11.43 21.35,11.1z" fill="#4285F4" />
-                    <path d="M12,20.6c2.6,0 4.78,-0.86 6.38,-2.34l-3.3,-2.58c-0.91,0.61 -2.08,0.98 -3.08,0.98 -2.37,0 -4.38,-1.6 -5.1,-3.76H3.4v2.66C5.02,18.8 8.28,20.6 12,20.6z" fill="#34A853" />
-                    <path d="M6.9,12.9c-0.18,-0.54 -0.28,-1.11 -0.28,-1.7c0,-0.59 0.1,-1.16 0.28,-1.7V6.84H3.4C2.78,8.08 2.42,9.5 2.42,11.2c0,1.7 0.36,3.12 0.98,4.36L6.9,12.9z" fill="#FBBC05" />
-                    <path d="M12,5.74c1.41,0 2.68,0.49 3.68,1.44L18,4.92C16.36,3.4 14.18,2.54 12,2.54 8.28,2.54 5.02,4.34 3.4,7.48L6.9,10.14c0.72,-2.16 2.73,-3.76 5.1,-3.76z" fill="#EA4335" />
-                  </svg>
-                  Connect with Google
-                </>
-              )}
-            </button>
           </div>
         )}
 
-        {/* Step 2: Select Location OR Handle No Locations */}
-        {currentStep === 2 && (
-          <div className="animate-fade-in">
-            {locations.length > 0 ? (
-              <div className="p-6 sm:p-8 rounded-2xl border border-rc-border bg-rc-card/50 backdrop-blur-md shadow-2xl space-y-6">
-                <div className="text-center space-y-2 mb-4">
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rc-accent/10 border border-rc-accent/20 text-rc-accent">
-                    <Sparkles className="h-5 w-5 animate-pulse" />
+        {/* Form Wizard Container */}
+        <div className="bg-rc-card/50 backdrop-blur-md border border-rc-border p-6 sm:p-10 rounded-3xl shadow-2xl transition-all duration-300">
+          
+          {/* STEP 1: Tell us about your business */}
+          {step === 1 && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-rc-accent">
+                  <Building className="h-5 w-5" />
+                  <h2 className="text-xl font-extrabold tracking-tight">Tell us about your business</h2>
+                </div>
+                <p className="text-xs text-rc-muted">
+                  Let&apos;s establish your business profile information.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                {/* Name */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider">
+                    Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g. Blue Basil Bistro"
+                    className="w-full px-4 py-3 rounded-xl bg-rc-bg border border-rc-border text-rc-text placeholder-rc-muted/40 text-sm focus:outline-none focus:border-rc-accent focus:ring-1 focus:ring-rc-accent transition-all duration-200"
+                  />
+                </div>
+
+                {/* Category */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider">
+                    Business Category *
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-rc-bg border border-rc-border text-rc-text text-sm focus:outline-none focus:border-rc-accent focus:ring-1 focus:ring-rc-accent cursor-pointer transition-all duration-200"
+                  >
+                    <option value="" disabled>Select a category...</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat.toLowerCase()}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Website */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider">
+                    Business Website (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://yourbusiness.com"
+                    className="w-full px-4 py-3 rounded-xl bg-rc-bg border border-rc-border text-rc-text placeholder-rc-muted/40 text-sm focus:outline-none focus:border-rc-accent focus:ring-1 focus:ring-rc-accent transition-all duration-200"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Goal and Challenge Selection */}
+          {step === 2 && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Goals */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-rc-accent">
+                    <Target className="h-5 w-5" />
+                    <h2 className="text-lg font-bold tracking-tight">What is your main goal?</h2>
                   </div>
-                  <h2 className="text-xl font-bold text-rc-text">
-                    Select Your Verified Business
-                  </h2>
                   <p className="text-xs text-rc-muted">
-                    We found {locations.length} verified {locations.length === 1 ? "location" : "locations"} on your Google account.
+                    Select a key objective you wish to drive with ReplyDesk.
                   </p>
                 </div>
 
-                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-                  {locations.map((loc) => {
-                    const isSelected = selectedLoc?.place_id === loc.place_id;
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {goals.map((g) => {
+                    const isSelected = goal === g.id;
                     return (
                       <button
-                        key={loc.place_id}
+                        key={g.id}
                         type="button"
-                        onClick={() => handleSelectLocation(loc)}
-                        disabled={loading}
-                        className={`w-full text-left p-4 rounded-xl border flex flex-col gap-1.5 transition-all duration-200 cursor-pointer disabled:opacity-50 ${
+                        onClick={() => setGoal(g.id)}
+                        className={`text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${
                           isSelected
-                            ? "border-rc-accent bg-rc-accent/5 ring-1 ring-rc-accent"
+                            ? "border-rc-accent bg-rc-accent-soft/10 shadow-lg shadow-rc-accent/5 ring-1 ring-rc-accent"
                             : "border-rc-border bg-rc-bg/30 hover:border-rc-border-light hover:bg-rc-bg"
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-rc-text leading-tight">{loc.name}</span>
-                          <span className="text-[10px] font-bold text-rc-accent bg-rc-accent/15 px-2 py-0.5 rounded border border-rc-accent/25 uppercase shrink-0">
-                            {loc.primary_category || "Business"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-rc-muted leading-relaxed">
-                          <MapPin className="h-3.5 w-3.5 text-rc-accent shrink-0" />
-                          <span className="truncate">{loc.address}</span>
-                        </div>
+                        <div className="text-xl mb-1.5">{g.emoji}</div>
+                        <h3 className="text-sm font-bold text-rc-text">{g.label}</h3>
+                        <p className="text-[11px] text-rc-muted mt-1 leading-normal">{g.desc}</p>
                       </button>
                     );
                   })}
                 </div>
-
-                <div className="pt-2 flex flex-col gap-2.5">
-                  <p className="text-[11px] text-rc-muted text-center leading-normal">
-                    Don&apos;t see your business? Verify that it is registered and verified on Google My Business.
-                  </p>
-                  <button
-                    onClick={handleConnectGoogle}
-                    className="w-full py-2.5 border border-rc-border hover:bg-rc-bg text-xs font-semibold rounded-lg text-rc-text transition-all duration-200 cursor-pointer"
-                  >
-                    Connect a different Google Account
-                  </button>
-                </div>
               </div>
-            ) : (
-              // Step 3: No Locations Found View
-              <div className="p-6 sm:p-10 rounded-2xl border border-rc-border bg-rc-card/50 backdrop-blur-md shadow-2xl text-center space-y-6">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-500">
-                  <AlertTriangle className="h-6 w-6" />
-                </div>
 
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-rc-text">
-                    No Verified Business Locations Found
-                  </h2>
-                  <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
-                    We couldn&apos;t find any verified Google Business Profile locations under this account.
+              {/* Challenges */}
+              <div className="space-y-4 pt-4 border-t border-rc-border/50">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-rc-accent">
+                    <AlertCircle className="h-5 w-5" />
+                    <h2 className="text-lg font-bold tracking-tight">What is your biggest challenge?</h2>
+                  </div>
+                  <p className="text-xs text-rc-muted">
+                    Identify your primary pain point in review reputation management.
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-rc-border">
-                  <button
-                    onClick={handleConnectGoogle}
-                    className="w-full py-3 px-6 rounded-xl bg-rc-accent text-rc-bg font-semibold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/20 cursor-pointer"
-                  >
-                    Try a different Google Account
-                  </button>
-                  <a
-                    href="https://business.google.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-6 rounded-xl border border-rc-border text-rc-text font-semibold text-sm hover:bg-rc-card transition-all duration-200 inline-flex items-center justify-center"
-                  >
-                    Learn how to verify on Google
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {challenges.map((c) => {
+                    const isSelected = challenge === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setChallenge(c.id)}
+                        className={`text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                          isSelected
+                            ? "border-rc-accent bg-rc-accent-soft/10 shadow-lg shadow-rc-accent/5 ring-1 ring-rc-accent"
+                            : "border-rc-border bg-rc-bg/30 hover:border-rc-border-light hover:bg-rc-bg"
+                        }`}
+                      >
+                        <div className="text-xl mb-1.5">{c.emoji}</div>
+                        <h3 className="text-sm font-bold text-rc-text">{c.label}</h3>
+                        <p className="text-[11px] text-rc-muted mt-1 leading-normal">{c.desc}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+
+          {/* STEP 3: Tone & Review Volume Selection */}
+          {step === 3 && (
+            <div className="space-y-8 animate-fade-in">
+              {/* AI Tones */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-rc-accent">
+                    <Volume2 className="h-5 w-5" />
+                    <h2 className="text-lg font-bold tracking-tight">Set your AI response style</h2>
+                  </div>
+                  <p className="text-xs text-rc-muted">
+                    Select a default tone for automated AI draft suggestions.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {tones.map((t) => {
+                    const isSelected = tone === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTone(t.id)}
+                        className={`text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                          isSelected
+                            ? "border-rc-accent bg-rc-accent-soft/10 shadow-lg shadow-rc-accent/5 ring-1 ring-rc-accent"
+                            : "border-rc-border bg-rc-bg/30 hover:border-rc-border-light hover:bg-rc-bg"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-lg">{t.emoji}</span>
+                          <h3 className="text-sm font-bold text-rc-text">{t.label}</h3>
+                        </div>
+                        <p className="text-[11px] text-rc-muted leading-normal">{t.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Monthly Review Volume */}
+              <div className="space-y-4 pt-4 border-t border-rc-border/50">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-rc-accent">
+                    <TrendingUp className="h-5 w-5" />
+                    <h2 className="text-lg font-bold tracking-tight">How many reviews do you get per month?</h2>
+                  </div>
+                  <p className="text-xs text-rc-muted">
+                    This helps us customize scaling presets for your profile.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {volumes.map((v) => {
+                    const isSelected = reviewVolume === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setReviewVolume(v.id)}
+                        className={`text-center py-4 px-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? "border-rc-accent bg-rc-accent-soft/10 shadow-lg shadow-rc-accent/5 ring-1 ring-rc-accent"
+                            : "border-rc-border bg-rc-bg/30 hover:border-rc-border-light hover:bg-rc-bg"
+                        }`}
+                      >
+                        <span className="text-lg">{v.emoji}</span>
+                        <span className="text-xs font-bold text-rc-text">{v.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Success Screen */}
+          {step === 4 && (
+            <div className="p-4 sm:p-6 text-center space-y-8 animate-fade-in flex flex-col items-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rc-accent/15 border border-rc-accent/35 text-rc-accent shadow-[0_0_20px_#00d4aa33] animate-bounce">
+                <CheckCircle2 className="h-9 w-9" />
+              </div>
+
+              <div className="space-y-3">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-rc-text">
+                  You&apos;re all set! 🎉
+                </h2>
+                <p className="text-sm text-rc-muted max-w-sm mx-auto leading-relaxed">
+                  Your dashboard is ready. Connect Google Business when you&apos;re ready to start syncing reviews.
+                </p>
+              </div>
+
+              <button
+                onClick={handleGoToDashboard}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rc-accent text-rc-bg font-extrabold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-xl shadow-rc-accent/20 cursor-pointer flex items-center justify-center gap-2 group"
+              >
+                Go to Dashboard
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+          )}
+
+          {/* Footer Action Navigation Buttons (Steps 1-3) */}
+          {step < 4 && (
+            <div className="mt-8 pt-6 border-t border-rc-border/50 flex items-center justify-between gap-4">
+              {/* Back button */}
+              {step > 1 ? (
+                <button
+                  onClick={handleBack}
+                  disabled={loading}
+                  className="px-5 py-3 rounded-xl border border-rc-border text-rc-text hover:bg-rc-bg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+              ) : (
+                <div /> // spacer
+              )}
+
+              {/* Next/Complete Button */}
+              {step < 3 ? (
+                <button
+                  onClick={handleNext}
+                  className="px-6 py-3 rounded-xl bg-rc-accent text-rc-bg hover:bg-rc-accent-hover text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rc-accent/10"
+                >
+                  Next Step
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl bg-rc-accent text-rc-bg hover:bg-rc-accent-hover text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rc-accent/25 disabled:opacity-60"
+                >
+                  {loading ? "Completing..." : "Complete Setup 🎉"}
+                </button>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );

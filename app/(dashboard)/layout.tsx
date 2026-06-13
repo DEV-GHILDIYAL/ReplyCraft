@@ -134,6 +134,10 @@ export default function DashboardLayout({
 
         if (!biz) {
           setBusiness(null);
+          if (pathname !== "/onboarding") {
+            router.push("/onboarding");
+            return;
+          }
         } else {
           const mappedBiz = {
             ...biz,
