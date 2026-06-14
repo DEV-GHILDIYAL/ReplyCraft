@@ -20,10 +20,11 @@ export default function Navbar() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
+        if (session) {
+          const { data: { user } } = await supabase.auth.getUser();
+          setIsLoggedIn(!!user);
+        } else {
           setIsLoggedIn(false);
-        } else if (event === 'SIGNED_IN' && session) {
-          setIsLoggedIn(true);
         }
         setAuthChecked(true);
       }
