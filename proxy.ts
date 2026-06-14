@@ -59,7 +59,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Auth routes - redirect to dashboard if already authenticated
-  const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
+  // NOTE: /reset-password is excluded because recovery sessions need to stay here
+  const authRoutes = ["/login", "/register", "/forgot-password"];
   const isAuthRoute = authRoutes.includes(pathname);
 
   if (isAuthRoute && user) {
