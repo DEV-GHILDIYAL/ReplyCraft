@@ -18,7 +18,7 @@ export const getRazorpayInstance = () => {
 
 export const PLANS_PRICES = {
   trial: 0,
-  starter: 499,
+  starter: 3, // TEMP: Test price - change back to 499 before launch
   growth: 999,
   scale: 2499,
 };

@@ -59,7 +59,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Auth routes - redirect to dashboard if already authenticated
-  const authRoutes = ["/login", "/register"];
+  const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
   const isAuthRoute = authRoutes.includes(pathname);
 
   if (isAuthRoute && user) {
@@ -83,5 +83,7 @@ export const config = {
     "/onboarding/:path*",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
   ],
 };
