@@ -22,6 +22,10 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface ExtendedDraft extends ResponseDraft {
   reviews: Review; // Joined review details
+  businesses?: {
+    auto_reply_enabled: boolean;
+    auto_reply_schedule: string;
+  };
 }
 
 export default function ResponsesPage() {
@@ -323,9 +327,16 @@ export default function ResponsesPage() {
                 <div className="lg:w-1/2 flex flex-col justify-between space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-rc-accent uppercase tracking-wider">
-                        Response Draft ({draft.tone})
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-rc-accent uppercase tracking-wider">
+                          Response Draft ({draft.tone})
+                        </span>
+                        {draft.status === "approved" && draft.businesses?.auto_reply_enabled && draft.businesses?.auto_reply_schedule !== "immediately" && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/15 text-yellow-500 border border-yellow-500/25 uppercase tracking-wider animate-pulse">
+                            Scheduled ({draft.businesses.auto_reply_schedule})
+                          </span>
+                        )}
+                      </div>
                       {!isEditing && draft.status !== "published" && (
                         <button
                           onClick={() => startEditing(draft)}

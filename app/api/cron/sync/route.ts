@@ -70,6 +70,40 @@ function generateDraftHeuristically(
   }
 }
 
+function shouldPublishNow(
+  schedule: string,
+  targetTime: string,
+  targetDay: string
+): boolean {
+  if (!schedule || schedule === "immediately") {
+    return true;
+  }
+
+  const now = new Date();
+  const [targetHour, targetMin] = targetTime.split(":").map(Number);
+  const currentHour = now.getHours();
+
+  if (schedule === "daily") {
+    const diff = (currentHour - targetHour + 24) % 24;
+    return diff < 6;
+  }
+
+  if (schedule === "weekly") {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const currentDayIndex = now.getDay();
+    const targetDayIndex = days.indexOf(targetDay.toLowerCase());
+    
+    if (targetDayIndex === -1) return false;
+
+    const dayDiff = (currentDayIndex - targetDayIndex + 7) % 7;
+    const totalHourDiff = dayDiff * 24 + (currentHour - targetHour);
+    
+    return totalHourDiff >= 0 && totalHourDiff < 6;
+  }
+
+  return false;
+}
+
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get('authorization')
@@ -102,6 +136,42 @@ export async function GET(request: Request) {
       if (biz.plan === "trial" && isTrialExpired(biz.trial_started_at)) {
         console.log(`Skipping sync for business ${biz.name} - trial expired`);
         continue;
+      }
+
+      // Check if we should publish scheduled auto-reply drafts if their schedule matches now
+      const isAutoReply = biz.auto_reply_enabled && (biz.plan === "starter" || biz.plan === "growth" || biz.plan === "scale");
+      const publishNow = isAutoReply && shouldPublishNow(
+        biz.auto_reply_schedule || "immediately", 
+        biz.auto_reply_time || "09:00", 
+        biz.auto_reply_day || "monday"
+      );
+
+      if (publishNow) {
+        // Fetch all approved drafts for this business
+        const { data: approvedDrafts } = await supabase
+          .from("response_drafts")
+          .select("*")
+          .eq("business_id", biz.id)
+          .eq("status", "approved");
+
+        if (approvedDrafts && approvedDrafts.length > 0) {
+          for (const draft of approvedDrafts) {
+            await supabase
+              .from("response_drafts")
+              .update({ status: "published" })
+              .eq("id", draft.id);
+
+            await supabase
+              .from("reviews")
+              .update({
+                is_responded: true,
+                response_text: draft.draft_text,
+                response_published_at: new Date().toISOString(),
+              })
+              .eq("id", draft.review_id);
+          }
+          console.log(`Published ${approvedDrafts.length} scheduled drafts for business: ${biz.name}`);
+        }
       }
 
       let currentUsed = biz.ai_drafts_used || 0;
@@ -293,15 +363,13 @@ CRITICAL RULES:
           }
         }
 
-        const isAutoReply = biz.auto_reply_enabled && (biz.plan === "starter" || biz.plan === "growth" || biz.plan === "scale");
-
         // Insert draft
         await supabase.from("response_drafts").insert({
           review_id: review.id,
           business_id: biz.id,
           draft_text: draftText,
           ai_model: groq ? "llama-3.1-8b-instant" : "cron-fallback",
-          status: isAutoReply ? "published" : "pending",
+          status: publishNow ? "published" : (isAutoReply ? "approved" : "pending"),
           tone: defaultTone,
         });
 
@@ -310,8 +378,8 @@ CRITICAL RULES:
         draftsGenerated++;
         processedCount++;
 
-        // If Auto-Reply, update the review record directly to responded
-        if (isAutoReply) {
+        // If Auto-Reply and publishing now, update the review record directly to responded
+        if (publishNow) {
           await supabase
             .from("reviews")
             .update({

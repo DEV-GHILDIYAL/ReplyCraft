@@ -20,6 +20,9 @@ CREATE TABLE businesses (
   plan_expires_at TIMESTAMPTZ,
   razorpay_customer_id TEXT,
   auto_reply_enabled BOOLEAN NOT NULL DEFAULT false,
+  auto_reply_schedule TEXT DEFAULT 'immediately',
+  auto_reply_time TEXT DEFAULT '09:00',
+  auto_reply_day TEXT DEFAULT 'monday',
   onboarding_data JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

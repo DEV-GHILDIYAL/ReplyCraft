@@ -13,6 +13,9 @@ export default function SettingsPage() {
   const [category, setCategory] = useState("");
   const [plan, setPlan] = useState("");
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
+  const [autoReplySchedule, setAutoReplySchedule] = useState("immediately");
+  const [autoReplyTime, setAutoReplyTime] = useState("09:00");
+  const [autoReplyDay, setAutoReplyDay] = useState("monday");
 
   // Business onboarding profile fields
   const [goal, setGoal] = useState("");
@@ -35,6 +38,9 @@ export default function SettingsPage() {
       setCategory(biz.category || "");
       setPlan(biz.plan === "free" ? "trial" : biz.plan);
       setAutoReplyEnabled(biz.auto_reply_enabled || false);
+      setAutoReplySchedule(biz.auto_reply_schedule || "immediately");
+      setAutoReplyTime(biz.auto_reply_time || "09:00");
+      setAutoReplyDay(biz.auto_reply_day || "monday");
 
       // Load business preferences from onboarding_data
       const onboardingData = biz.onboarding_data || {};
@@ -47,6 +53,9 @@ export default function SettingsPage() {
       setCategory("");
       setPlan("trial");
       setAutoReplyEnabled(false);
+      setAutoReplySchedule("immediately");
+      setAutoReplyTime("09:00");
+      setAutoReplyDay("monday");
       setGoal("");
       setChallenge("");
       setTone("Professional");
@@ -72,7 +81,10 @@ export default function SettingsPage() {
           .update({ 
             name: businessName, 
             category: category || null,
-            auto_reply_enabled: autoReplyEnabled
+            auto_reply_enabled: autoReplyEnabled,
+            auto_reply_schedule: autoReplySchedule,
+            auto_reply_time: autoReplyTime,
+            auto_reply_day: autoReplyDay
           })
           .eq("id", businessId);
 
@@ -87,6 +99,9 @@ export default function SettingsPage() {
             name: businessName,
             category: category || null,
             auto_reply_enabled: autoReplyEnabled,
+            auto_reply_schedule: autoReplySchedule,
+            auto_reply_time: autoReplyTime,
+            auto_reply_day: autoReplyDay,
             plan: "trial",
             trial_started_at: new Date().toISOString(),
             ai_drafts_used: 0,
@@ -221,48 +236,107 @@ export default function SettingsPage() {
             <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-2.5">
               Auto-Reply Mode
             </label>
-            <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+            <div className={`p-4 rounded-xl border flex flex-col gap-4 transition-all ${
               autoReplyEnabled
                 ? "border-rc-accent/40 bg-rc-accent/5"
                 : "border-rc-border bg-rc-bg/40"
             }`}>
-              <div className="space-y-1 pr-4">
-                <span className="text-sm font-semibold text-rc-text block">
-                  Auto-Publish Replies
-                </span>
-                <span className="text-xs text-rc-muted block leading-relaxed">
-                  Automatically publish AI responses immediately upon review synchronization, bypassing the approval queue.
-                </span>
-              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1 pr-4">
+                  <span className="text-sm font-semibold text-rc-text block">
+                    Auto-Publish Replies
+                  </span>
+                  <span className="text-xs text-rc-muted block leading-relaxed">
+                    Automatically publish AI responses to Google based on review synchronization and scheduling.
+                  </span>
+                </div>
 
-              <div className="relative flex items-center shrink-0">
-                {(plan === "starter" || plan === "growth" || plan === "scale") ? (
-                  <button
-                    type="button"
-                    onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
-                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-none ${
-                      autoReplyEnabled ? "bg-rc-accent" : "bg-rc-border"
-                    }`}
-                  >
-                    <span className={`w-4 h-4 rounded-full bg-rc-bg absolute top-1 transition-all ${
-                      autoReplyEnabled ? "left-6" : "left-1"
-                     }`} />
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-end gap-1.5">
+                <div className="relative flex items-center shrink-0">
+                  {(plan === "starter" || plan === "growth" || plan === "scale") ? (
                     <button
                       type="button"
-                      disabled
-                      className="w-11 h-6 rounded-full bg-rc-border opacity-50 cursor-not-allowed relative"
+                      onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-none ${
+                        autoReplyEnabled ? "bg-rc-accent" : "bg-rc-border"
+                      }`}
                     >
-                      <span className="w-4 h-4 rounded-full bg-rc-bg absolute top-1 left-1" />
+                      <span className={`w-4 h-4 rounded-full bg-rc-bg absolute top-1 transition-all ${
+                        autoReplyEnabled ? "left-6" : "left-1"
+                       }`} />
                     </button>
-                    <span className="text-[10px] text-yellow-500 font-semibold bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
-                      Upgrade to Paid Plan
-                    </span>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-end gap-1.5">
+                      <button
+                        type="button"
+                        disabled
+                        className="w-11 h-6 rounded-full bg-rc-border opacity-50 cursor-not-allowed relative"
+                      >
+                        <span className="w-4 h-4 rounded-full bg-rc-bg absolute top-1 left-1" />
+                      </button>
+                      <span className="text-[10px] text-yellow-500 font-semibold bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                        Upgrade to Paid Plan
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {autoReplyEnabled && (
+                <div className="border-t border-rc-border pt-4 mt-2 space-y-4 animate-fade-in">
+                  <h3 className="text-xs font-bold text-rc-text uppercase tracking-wider">Auto-Reply Schedule Settings</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-rc-muted mb-1.5">
+                        Schedule Type
+                      </label>
+                      <select
+                        value={autoReplySchedule}
+                        onChange={(e) => setAutoReplySchedule(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-rc-bg border border-rc-border text-rc-text text-xs focus:outline-none focus:ring-1 focus:ring-rc-accent"
+                      >
+                        <option value="immediately">Immediately</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </div>
+
+                    {autoReplySchedule !== "immediately" && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-rc-muted mb-1.5">
+                          Time (24h format)
+                        </label>
+                        <input
+                          type="time"
+                          value={autoReplyTime}
+                          onChange={(e) => setAutoReplyTime(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-rc-bg border border-rc-border text-rc-text text-xs focus:outline-none focus:ring-1 focus:ring-rc-accent"
+                        />
+                      </div>
+                    )}
+
+                    {autoReplySchedule === "weekly" && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-rc-muted mb-1.5">
+                          Day of the Week
+                        </label>
+                        <select
+                          value={autoReplyDay}
+                          onChange={(e) => setAutoReplyDay(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-rc-bg border border-rc-border text-rc-text text-xs focus:outline-none focus:ring-1 focus:ring-rc-accent"
+                        >
+                          <option value="monday">Monday</option>
+                          <option value="tuesday">Tuesday</option>
+                          <option value="wednesday">Wednesday</option>
+                          <option value="thursday">Thursday</option>
+                          <option value="friday">Friday</option>
+                          <option value="saturday">Saturday</option>
+                          <option value="sunday">Sunday</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

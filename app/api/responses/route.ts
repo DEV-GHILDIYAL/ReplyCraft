@@ -27,10 +27,10 @@ export async function GET() {
       );
     }
 
-    // Fetch all drafts joined with review details
+    // Fetch all drafts joined with review details and business details
     const { data: drafts, error: draftsError } = await supabase
       .from("response_drafts")
-      .select("*, reviews(*)")
+      .select("*, reviews(*), businesses(auto_reply_enabled, auto_reply_schedule)")
       .eq("business_id", business.id)
       .order("created_at", { ascending: false });
 
