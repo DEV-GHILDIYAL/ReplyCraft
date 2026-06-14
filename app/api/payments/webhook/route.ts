@@ -7,10 +7,8 @@ export async function POST(request: Request) {
     const rawBody = await request.text();
     const headers = request.headers;
     const signature = headers.get("x-razorpay-signature");
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-
-    const isPlaceholderSecret =
-      !secret || secret === "your-razorpay-secret" || secret.trim() === "";
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
     let body: any = {};
     try {
@@ -22,35 +20,55 @@ export async function POST(request: Request) {
     const isProduction = process.env.NODE_ENV === "production";
 
     // 1. Signature Verification
-    if (isProduction) {
-      if (!signature) {
+    if (body.razorpay_signature) {
+      // Client-side verification payload from the checkout handler
+      const isPlaceholderKeySecret =
+        !keySecret || keySecret === "your-razorpay-secret" || keySecret.trim() === "";
+
+      if (isProduction && isPlaceholderKeySecret) {
         return NextResponse.json(
-          { error: "x-razorpay-signature header is missing" },
-          { status: 401 }
-        );
-      }
-      if (isPlaceholderSecret) {
-        return NextResponse.json(
-          { error: "Webhook secret is not configured in production" },
+          { error: "Razorpay Key Secret is not configured in production" },
           { status: 500 }
         );
       }
-      const expectedSignature = crypto
-        .createHmac("sha256", secret!)
-        .update(rawBody)
-        .digest("hex");
 
-      if (expectedSignature !== signature) {
-        return NextResponse.json(
-          { error: "Invalid webhook signature" },
-          { status: 401 }
+      if (!isPlaceholderKeySecret) {
+        const expectedSignature = crypto
+          .createHmac("sha256", keySecret!)
+          .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
+          .digest("hex");
+
+        if (expectedSignature !== body.razorpay_signature) {
+          return NextResponse.json(
+            { error: "Invalid payment signature verification" },
+            { status: 401 }
+          );
+        }
+      } else {
+        console.warn(
+          "[Razorpay Webhook] Skipping client signature verification in simulation/mock mode."
         );
       }
     } else {
-      // Development/Simulation mode
-      if (signature && !isPlaceholderSecret) {
+      // Standard server-to-server webhook
+      const isPlaceholderWebhookSecret =
+        !webhookSecret || webhookSecret === "your-razorpay-secret" || webhookSecret.trim() === "";
+
+      if (isProduction) {
+        if (!signature) {
+          return NextResponse.json(
+            { error: "x-razorpay-signature header is missing" },
+            { status: 401 }
+          );
+        }
+        if (isPlaceholderWebhookSecret) {
+          return NextResponse.json(
+            { error: "Webhook secret is not configured in production" },
+            { status: 500 }
+          );
+        }
         const expectedSignature = crypto
-          .createHmac("sha256", secret!)
+          .createHmac("sha256", webhookSecret!)
           .update(rawBody)
           .digest("hex");
 
@@ -61,9 +79,24 @@ export async function POST(request: Request) {
           );
         }
       } else {
-        console.warn(
-          "[Razorpay Webhook] Running in SIMULATION mode because signature is missing or secret is not configured in development."
-        );
+        // Development/Simulation mode for webhook
+        if (signature && !isPlaceholderWebhookSecret) {
+          const expectedSignature = crypto
+            .createHmac("sha256", webhookSecret!)
+            .update(rawBody)
+            .digest("hex");
+
+          if (expectedSignature !== signature) {
+            return NextResponse.json(
+              { error: "Invalid webhook signature" },
+              { status: 401 }
+            );
+          }
+        } else {
+          console.warn(
+            "[Razorpay Webhook] Running in SIMULATION mode because signature is missing or secret is not configured in development."
+          );
+        }
       }
     }
 
@@ -146,7 +179,9 @@ export async function POST(request: Request) {
       if (updateBizError) throw updateBizError;
 
       // Create notification for plan upgrade
-      const planLabel = String(paymentRecord.plan).charAt(0).toUpperCase() + String(paymentRecord.plan).slice(1);
+      const planLabel =
+        String(paymentRecord.plan).charAt(0).toUpperCase() +
+        String(paymentRecord.plan).slice(1);
       await supabase.from("notifications").insert({
         business_id: paymentRecord.business_id,
         type: "plan_upgraded",
