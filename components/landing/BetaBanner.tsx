@@ -9,7 +9,7 @@ export default function BetaBanner() {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-rc-accent" />
         </span>
         <span className="text-xs font-medium text-rc-accent tracking-wide">
-          Now in Beta — Free for 14 Days
+          Now in Beta — Free for 7 Days
         </span>
       </div>
     </div>

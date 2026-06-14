@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     description:
       "Turn every review into a growth opportunity. AI drafts perfect responses in seconds.",
     type: "website",
-    url: "https://replydesk.io",
+    url: "https://replydesk.in",
   },
   twitter: {
     card: "summary_large_image",
