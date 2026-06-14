@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,17 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if we have a valid session from recovery
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/forgot-password");
+      }
+    };
+    checkSession();
+  }, [supabase, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
