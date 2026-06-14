@@ -389,7 +389,7 @@ CRITICAL RULES:
 
         if (resend) {
           await resend.emails.send({
-            from: "ReplyDesk Alerts <onboarding@resend.dev>",
+            from: "ReplyDesk Alerts <alerts@replydesk.in>",
             to: ownerEmail,
             subject: emailSubject,
             html: emailHtml,
