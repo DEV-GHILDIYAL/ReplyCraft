@@ -30,10 +30,27 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (!exchangeError) {
+      let isRecovery = type === "recovery";
+
+      if (session?.access_token) {
+        try {
+          const parts = session.access_token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            const amr = payload.amr || [];
+            if (amr.some((m: any) => m.method === 'recovery' || m === 'recovery')) {
+              isRecovery = true;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse JWT AMR claim:", e);
+        }
+      }
+
       // If this is a password recovery, go to reset-password page
-      if (type === "recovery") {
+      if (isRecovery) {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
 

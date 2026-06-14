@@ -8,7 +8,20 @@ import Footer from "@/components/landing/Footer";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
-export default async function LandingPage() {
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function LandingPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams;
+  const code = typeof resolvedSearchParams.code === "string" ? resolvedSearchParams.code : undefined;
+
+  if (code) {
+    const type = typeof resolvedSearchParams.type === "string" ? resolvedSearchParams.type : "";
+    const typeParam = type ? `&type=${type}` : "";
+    redirect(`/auth/callback?code=${code}${typeParam}`);
+  }
+
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },

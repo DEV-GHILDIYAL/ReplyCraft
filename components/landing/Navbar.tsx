@@ -12,21 +12,33 @@ export default function Navbar() {
 
   useEffect(() => {
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
-      setAuthChecked(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsLoggedIn(!!user);
+      } catch (err) {
+        console.error("Error checking auth:", err);
+        setIsLoggedIn(false);
+      } finally {
+        setAuthChecked(true);
+      }
     }
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setIsLoggedIn(!!user);
-        } else {
+        try {
+          if (session) {
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsLoggedIn(!!user);
+          } else {
+            setIsLoggedIn(false);
+          }
+        } catch (err) {
+          console.error("Error on auth state change:", err);
           setIsLoggedIn(false);
+        } finally {
+          setAuthChecked(true);
         }
-        setAuthChecked(true);
       }
     );
 
