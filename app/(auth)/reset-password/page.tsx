@@ -14,14 +14,28 @@ export default function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if we have a valid session from recovery
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/forgot-password");
-      }
-    };
-    checkSession();
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get("access_token");
+    const type = hashParams.get("type");
+    
+    if (accessToken && type === "recovery") {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: hashParams.get("refresh_token") || "",
+      }).then(({ error }) => {
+        if (error) {
+          setError("Invalid or expired reset link. Please request a new one.");
+          router.push("/forgot-password");
+        }
+      });
+    } else {
+      // No recovery token found
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          router.push("/forgot-password");
+        }
+      });
+    }
   }, [supabase, router]);
 
   async function handleSubmit(e: React.FormEvent) {
