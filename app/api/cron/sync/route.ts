@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { Tone } from "@/types";
 import { isTrialExpired, getDraftLimit } from "@/lib/plans";
+import { syncGoogleReviews } from "../../platforms/google/fetch-reviews/route";
 
 // Reusable sentiment logic (from sentiment API)
 const POSITIVE_WORDS = ["good", "great", "excellent", "love", "friendly", "best", "perfect", "delicious", "amazing", "happy", "recommend"];
@@ -136,6 +137,25 @@ export async function GET(request: Request) {
       if (biz.plan === "trial" && isTrialExpired(biz.trial_started_at)) {
         console.log(`Skipping sync for business ${biz.name} - trial expired`);
         continue;
+      }
+
+      // Sync latest reviews from connected platforms
+      try {
+        const { data: activePlatforms } = await supabase
+          .from("platforms")
+          .select("*")
+          .eq("business_id", biz.id)
+          .eq("is_active", true);
+
+        if (activePlatforms) {
+          for (const plat of activePlatforms) {
+            if (plat.platform === "google") {
+              await syncGoogleReviews(supabase, plat.place_id, biz);
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.error(`Failed to sync reviews for business ${biz.name} during cron:`, syncErr);
       }
 
       // Check if we should publish scheduled auto-reply drafts if their schedule matches now

@@ -263,7 +263,7 @@ export async function syncGoogleReviews(
           is_responded: false,
         },
         {
-          onConflict: "platform_review_id",
+          onConflict: "business_id,platform_review_id",
           ignoreDuplicates: true,
         }
       )

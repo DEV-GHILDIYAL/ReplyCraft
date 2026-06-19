@@ -110,6 +110,15 @@ export default function DashboardLayout({
   useEffect(() => {
     async function initDashboard() {
       try {
+        // If business and email are already in state, just run route guard checks locally to prevent DB requests
+        if (business) {
+          if (business.plan === "starter" && pathname === "/sentiment") {
+            toast.error("Upgrade to Growth plan to access Sentiment Analytics");
+            router.push("/settings");
+          }
+          return;
+        }
+
         const {
           data: { user },
           error: userError,
@@ -160,7 +169,7 @@ export default function DashboardLayout({
     }
 
     initDashboard();
-  }, [pathname, router, supabase]);
+  }, [pathname, router, supabase, business]);
 
   const handleLogout = async () => {
     try {

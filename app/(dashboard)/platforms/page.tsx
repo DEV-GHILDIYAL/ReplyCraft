@@ -85,9 +85,6 @@ export default function PlatformsPage() {
   // Google OAuth connect flow states
   const stepParam = searchParams.get("step");
   const locationsParam = searchParams.get("locations");
-  const accessTokenParam = searchParams.get("access_token");
-  const refreshTokenParam = searchParams.get("refresh_token");
-  const tokenExpiresAtParam = searchParams.get("token_expires_at");
   const errorParam = searchParams.get("error");
 
   const [locations, setLocations] = useState<any[]>([]);
@@ -164,7 +161,7 @@ export default function PlatformsPage() {
   const handleConnect = (platformKey: string) => {
     if (platformKey === "google") {
       setActionLoading(true);
-      window.location.href = "/api/platforms/google/connect";
+      window.location.assign("/api/platforms/google/connect");
     }
   };
 
@@ -264,9 +261,6 @@ export default function PlatformsPage() {
                         locationId: selectedLoc.location_id,
                         accountId: selectedLoc.account_id,
                         category: selectedLoc.primary_category,
-                        accessToken: accessTokenParam,
-                        refreshToken: refreshTokenParam,
-                        tokenExpiresAt: tokenExpiresAtParam,
                       }),
                     });
 

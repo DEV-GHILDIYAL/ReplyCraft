@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 import { syncGoogleReviews } from "../fetch-reviews/route";
 
 export async function GET() {
@@ -33,13 +35,24 @@ export async function GET() {
       );
     }
 
+    // CSRF Protection: Generate and set state parameter
+    const state = crypto.randomUUID();
+    const cookieStore = await cookies();
+    cookieStore.set("google_oauth_state", state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 3600, // 1 hour
+    });
+
     // Direct to Google OAuth with scopes required for GMB location verification
     const scope = "openid email profile https://www.googleapis.com/auth/business.manage";
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=${encodeURIComponent(
       scope
-    )}&access_type=offline&prompt=select_account consent`;
+    )}&access_type=offline&prompt=select_account consent&state=${state}`;
 
     return NextResponse.redirect(authUrl);
   } catch (err) {
@@ -66,13 +79,44 @@ export async function POST(request: Request) {
       locationId,
       accountId,
       category,
-      accessToken,
-      refreshToken,
-      tokenExpiresAt,
     } = await request.json();
 
     if (!placeId || !locationName) {
       return NextResponse.json({ error: "locationName and placeId are required" }, { status: 400 });
+    }
+
+    // Retrieve tokens from secure HTTP-only cookie
+    const cookieStore = await cookies();
+    const tempTokensStr = cookieStore.get("google_oauth_temp_tokens")?.value;
+    
+    let accessToken: string | null = null;
+    let refreshToken: string | null = null;
+    let tokenExpiresAt: string | null = null;
+
+    if (tempTokensStr) {
+      try {
+        const tempTokens = JSON.parse(tempTokensStr);
+        accessToken = tempTokens.accessToken || null;
+        refreshToken = tempTokens.refreshToken || null;
+        tokenExpiresAt = tempTokens.expiresAt || null;
+      } catch (err) {
+        console.error("Failed to parse temp Google OAuth tokens:", err);
+      }
+      // Clean up secure cookie after reading tokens
+      cookieStore.delete("google_oauth_temp_tokens");
+    } else {
+      console.warn("No google_oauth_temp_tokens cookie found; checking for local mock simulation");
+      // Allow simulation mode if no tokens cookie is found and placeId is mock
+      if (placeId.startsWith("mock_")) {
+        accessToken = "mock_access_token";
+        refreshToken = "mock_refresh_token";
+        tokenExpiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+      } else {
+        return NextResponse.json(
+          { error: "OAuth connection session expired. Please connect your Google account again." },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user has an existing business

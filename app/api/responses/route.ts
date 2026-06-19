@@ -48,6 +48,56 @@ export async function GET() {
   }
 }
 
+async function refreshGoogleAccessToken(platform: any, supabase: any) {
+  const isMock = platform.access_token?.startsWith("mock_") || platform.place_id?.startsWith("mock_");
+  if (isMock) {
+    return platform.access_token;
+  }
+
+  const now = new Date();
+  const expiresAt = platform.token_expires_at ? new Date(platform.token_expires_at) : new Date(0);
+  
+  if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
+    return platform.access_token;
+  }
+
+  console.log(`Refreshing expired Google access token for business platform: ${platform.id}`);
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID || "",
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
+        refresh_token: platform.refresh_token || "",
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error_description || "Google token refresh failed");
+    }
+
+    const newAccessToken = data.access_token;
+    const expiresIn = data.expires_in || 3600;
+    const newExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+    await supabase
+      .from("platforms")
+      .update({
+        access_token: newAccessToken,
+        token_expires_at: newExpiresAt,
+      })
+      .eq("id", platform.id);
+
+    return newAccessToken;
+  } catch (err) {
+    console.error("Failed to refresh Google access token:", err);
+    throw err;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -152,7 +202,60 @@ export async function POST(request: Request) {
     }
 
     if (action === "publish") {
-      // 1. Upsert draft to status = 'published'
+      // 1. Post reply to Google Business Profile if real platform connection is present
+      try {
+        const { data: review } = await supabase
+          .from("reviews")
+          .select("*")
+          .eq("id", reviewId)
+          .single();
+
+        if (review && review.platform === "google") {
+          const { data: platform } = await supabase
+            .from("platforms")
+            .select("*")
+            .eq("business_id", businessId)
+            .eq("platform", "google")
+            .maybeSingle();
+
+          if (platform && platform.is_active) {
+            const isMock = platform.access_token?.startsWith("mock_") || platform.place_id?.startsWith("mock_") || review.platform_review_id.includes("mock_");
+
+            if (isMock) {
+              console.log("[Google Publish Simulation] Mock mode active. Simulated publishing response to Google.");
+            } else {
+              const accessToken = await refreshGoogleAccessToken(platform, supabase);
+              let reviewIdSegment = review.platform_review_id;
+              if (reviewIdSegment.includes("/")) {
+                reviewIdSegment = reviewIdSegment.split("/").pop() || reviewIdSegment;
+              }
+
+              const gmbReplyUrl = `https://mybusiness.googleapis.com/v1/accounts/${platform.account_id}/locations/${platform.platform_id}/reviews/${reviewIdSegment}/reply`;
+
+              const gmbRes = await fetch(gmbReplyUrl, {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ comment: text }),
+              });
+
+              if (!gmbRes.ok) {
+                const errText = await gmbRes.text();
+                console.error(`Google API reply publication failed: ${gmbRes.status} ${errText}`);
+                throw new Error(`Failed to publish response to Google Business Profile: ${errText}`);
+              }
+              console.log(`Successfully published response to Google Business Profile review: ${reviewIdSegment}`);
+            }
+          }
+        }
+      } catch (pubErr: any) {
+        console.error("Gracefully caught review response publishing error:", pubErr);
+        throw pubErr;
+      }
+
+      // 2. Upsert draft to status = 'published'
       const payload: any = {
         business_id: businessId,
         review_id: reviewId,
@@ -169,7 +272,7 @@ export async function POST(request: Request) {
 
       if (draftError) throw draftError;
 
-      // 2. Mark review as responded and update response text
+      // 3. Mark review as responded and update response text
       const { error: reviewError } = await supabase
         .from("reviews")
         .update({

@@ -128,7 +128,7 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User session not found. Please log in.");
 
-      let currentBizId = businessId;
+      const currentBizId = businessId;
       if (!currentBizId) {
         // Create a default business first if none exists
         const { data: newBiz, error } = await supabase

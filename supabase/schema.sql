@@ -19,6 +19,9 @@ CREATE TABLE businesses (
   plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'growth', 'scale')),
   plan_expires_at TIMESTAMPTZ,
   razorpay_customer_id TEXT,
+  trial_started_at TIMESTAMPTZ,
+  ai_drafts_used INTEGER NOT NULL DEFAULT 0,
+  ai_drafts_reset_at TIMESTAMPTZ,
   auto_reply_enabled BOOLEAN NOT NULL DEFAULT false,
   auto_reply_schedule TEXT DEFAULT 'immediately',
   auto_reply_time TEXT DEFAULT '09:00',
@@ -53,7 +56,7 @@ CREATE TABLE reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   platform TEXT NOT NULL,
-  platform_review_id TEXT UNIQUE,
+  platform_review_id TEXT,
   reviewer_name TEXT,
   rating INTEGER CHECK (rating BETWEEN 1 AND 5),
   review_text TEXT,
@@ -64,7 +67,8 @@ CREATE TABLE reviews (
   is_responded BOOLEAN NOT NULL DEFAULT false,
   response_text TEXT,
   response_published_at TIMESTAMPTZ,
-  fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(business_id, platform_review_id)
 );
 
 -- AI-generated response drafts

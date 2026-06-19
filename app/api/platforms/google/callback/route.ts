@@ -1,13 +1,31 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
     if (!code) {
       return NextResponse.redirect(new URL("/platforms?error=missing_code", requestUrl()));
+    }
+
+    const isMock = code === "mock_google_code";
+
+    // CSRF Check
+    if (!isMock) {
+      const cookieStore = await cookies();
+      const savedState = cookieStore.get("google_oauth_state")?.value;
+      cookieStore.delete("google_oauth_state");
+
+      if (!state || !savedState || state !== savedState) {
+        console.error("OAuth state verification failed. Possible CSRF attack.");
+        return NextResponse.redirect(
+          new URL("/platforms?error=google_auth_failed", requestUrl())
+        );
+      }
     }
 
     const supabase = await createServerSupabaseClient();
@@ -19,8 +37,6 @@ export async function GET(request: Request) {
     if (authError || !user) {
       return NextResponse.redirect(new URL("/login", requestUrl()));
     }
-
-    const isMock = code === "mock_google_code";
     let locations: any[] = [];
     let accessToken = "mock_access_token";
     let refreshToken = "mock_refresh_token";
@@ -145,13 +161,24 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Redirect user to platforms select-location step
+    // Store tokens securely in HTTP-only cookie
+    const cookieStore = await cookies();
+    cookieStore.set("google_oauth_temp_tokens", JSON.stringify({
+      accessToken,
+      refreshToken,
+      expiresAt,
+    }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 600, // 10 minutes
+    });
+
+    // Redirect user to platforms select-location step (no tokens in URL)
     const redirectUrl = new URL("/platforms", requestUrl());
     redirectUrl.searchParams.set("step", "select-location");
     redirectUrl.searchParams.set("locations", JSON.stringify(locations));
-    redirectUrl.searchParams.set("access_token", accessToken);
-    redirectUrl.searchParams.set("refresh_token", refreshToken);
-    redirectUrl.searchParams.set("token_expires_at", expiresAt);
 
     return NextResponse.redirect(redirectUrl);
   } catch (err: any) {
