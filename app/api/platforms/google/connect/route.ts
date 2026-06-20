@@ -17,6 +17,8 @@ export async function GET() {
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
+    console.log(`\n========================================`);
+    console.log(`[Google Connect] Detected GOOGLE_CLIENT_ID: "${clientId}"`);
     
     const redirectUri = process.env.NEXT_PUBLIC_APP_URL 
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/platforms/google/callback`
@@ -26,14 +28,15 @@ export async function GET() {
       !clientId || clientId === "your-google-client-id" || clientId.trim() === "";
 
     if (isPlaceholderKeys) {
-      // Simulation mode: Redirect straight to the callback route with a mock authorization code
-      console.warn(
-        "[Google OAuth] Running in SIMULATION mode because GOOGLE_CLIENT_ID is not configured."
-      );
+      console.log(`[Google Connect] ===> SIMULATION MODE ACTIVE (OAuth bypassed) <===`);
+      console.log(`========================================\n`);
       return NextResponse.redirect(
         new URL(`/api/platforms/google/callback?code=mock_google_code`, requestUrl())
       );
     }
+
+    console.log(`[Google Connect] ===> REAL OAUTH MODE ACTIVE (Redirecting to Google) <===`);
+    console.log(`========================================\n`);
 
     // CSRF Protection: Generate and set state parameter
     const state = crypto.randomUUID();

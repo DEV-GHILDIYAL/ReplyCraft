@@ -13,6 +13,10 @@ export async function GET(request: Request) {
     }
 
     const isMock = code === "mock_google_code";
+    console.log(`\n========================================`);
+    console.log(`[Google Callback] Received Auth Code: "${code}"`);
+    console.log(`[Google Callback] Detected Mode: ${isMock ? "SIMULATION MODE (Bypassed login)" : "REAL OAUTH MODE"}`);
+    console.log(`========================================\n`);
 
     // CSRF Check
     if (!isMock) {

@@ -157,6 +157,18 @@ export async function POST(request: Request) {
     }
 
     if (action === "approve") {
+      let targetDraftId = draftId;
+      if (!targetDraftId && reviewId) {
+        const { data: existingDrafts } = await supabase
+          .from("response_drafts")
+          .select("id")
+          .eq("review_id", reviewId)
+          .limit(1);
+        if (existingDrafts && existingDrafts.length > 0) {
+          targetDraftId = existingDrafts[0].id;
+        }
+      }
+
       const payload: any = {
         business_id: businessId,
         review_id: reviewId,
@@ -165,7 +177,7 @@ export async function POST(request: Request) {
         tone: tone || "professional",
       };
 
-      if (draftId) payload.id = draftId;
+      if (targetDraftId) payload.id = targetDraftId;
 
       const { data, error } = await supabase
         .from("response_drafts")
@@ -256,6 +268,18 @@ export async function POST(request: Request) {
       }
 
       // 2. Upsert draft to status = 'published'
+      let targetDraftId = draftId;
+      if (!targetDraftId && reviewId) {
+        const { data: existingDrafts } = await supabase
+          .from("response_drafts")
+          .select("id")
+          .eq("review_id", reviewId)
+          .limit(1);
+        if (existingDrafts && existingDrafts.length > 0) {
+          targetDraftId = existingDrafts[0].id;
+        }
+      }
+
       const payload: any = {
         business_id: businessId,
         review_id: reviewId,
@@ -264,7 +288,7 @@ export async function POST(request: Request) {
         tone: tone || "professional",
       };
 
-      if (draftId) payload.id = draftId;
+      if (targetDraftId) payload.id = targetDraftId;
 
       const { error: draftError } = await supabase
         .from("response_drafts")

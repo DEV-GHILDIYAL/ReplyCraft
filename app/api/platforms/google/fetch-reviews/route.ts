@@ -67,6 +67,52 @@ function generateDraftHeuristically(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MOCK_REVIEWS_FOR_PLACES: Record<string, any[]> = {
+  "mock_place_salon": [
+    {
+      name: "places/mock_place_salon/reviews/1",
+      rating: 5,
+      text: { text: "Absolutely loved the haircut and hair spa! The stylists are highly professional and friendly. Recommended!" },
+      authorAttribution: { displayName: "Rohan Sharma" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+    },
+    {
+      name: "places/mock_place_salon/reviews/2",
+      rating: 2,
+      text: { text: "The massage was fine, but I had to wait 30 minutes despite booking an appointment. Very poor management." },
+      authorAttribution: { displayName: "Priya Patel" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+    },
+    {
+      name: "places/mock_place_salon/reviews/3",
+      rating: 4,
+      text: { text: "Clean salon with pleasant background music. Staff is polite and hygiene is well maintained." },
+      authorAttribution: { displayName: "Amit Verma" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString()
+    }
+  ],
+  "mock_place_restaurant": [
+    {
+      name: "places/mock_place_restaurant/reviews/1",
+      rating: 5,
+      text: { text: "Awesome food! The paneer tikka and garlic naan were delicious. Excellent service and ambiance." },
+      authorAttribution: { displayName: "Sneha Rao" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
+    },
+    {
+      name: "places/mock_place_restaurant/reviews/2",
+      rating: 3,
+      text: { text: "Average taste. The chicken biryani was okay but felt overpriced for the quantity served." },
+      authorAttribution: { displayName: "Kunal Shah" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString()
+    },
+    {
+      name: "places/mock_place_restaurant/reviews/3",
+      rating: 1,
+      text: { text: "Terrible experience. The soup was cold and when we complained, the waiter was extremely rude. Avoid!" },
+      authorAttribution: { displayName: "Vikram Malhotra" },
+      publishTime: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString()
+    }
+  ],
   "places/mock_place_1": [
     {
       name: "places/mock_place_1/reviews/1",

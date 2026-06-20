@@ -212,19 +212,57 @@ CRITICAL RULES:
       throw new Error("Failed to generate response content");
     }
 
-    // Save draft to response_drafts table
-    const { data: draft, error: draftError } = await supabase
+    // Check if drafts already exist for this review to prevent duplicates
+    const { data: existingDrafts } = await supabase
       .from("response_drafts")
-      .insert({
-        review_id: reviewId,
-        business_id: review.business_id,
-        draft_text: draftText,
-        ai_model: groq ? "llama-3.1-8b-instant" : "fallback-templates",
-        status: "pending",
-        tone: tone,
-      })
-      .select()
-      .single();
+      .select("id")
+      .eq("review_id", reviewId);
+
+    let draft;
+    let draftError;
+
+    if (existingDrafts && existingDrafts.length > 0) {
+      const targetId = existingDrafts[0].id;
+      const { data, error } = await supabase
+        .from("response_drafts")
+        .update({
+          draft_text: draftText,
+          ai_model: groq ? "llama-3.1-8b-instant" : "fallback-templates",
+          status: "pending",
+          tone: tone,
+        })
+        .eq("id", targetId)
+        .select()
+        .single();
+      
+      draft = data;
+      draftError = error;
+
+      // Clean up any extra duplicate drafts for this review
+      if (existingDrafts.length > 1) {
+        const otherIds = existingDrafts.slice(1).map((d) => d.id);
+        await supabase
+          .from("response_drafts")
+          .delete()
+          .in("id", otherIds);
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("response_drafts")
+        .insert({
+          review_id: reviewId,
+          business_id: review.business_id,
+          draft_text: draftText,
+          ai_model: groq ? "llama-3.1-8b-instant" : "fallback-templates",
+          status: "pending",
+          tone: tone,
+        })
+        .select()
+        .single();
+      
+      draft = data;
+      draftError = error;
+    }
 
     if (draftError) {
       throw draftError;
