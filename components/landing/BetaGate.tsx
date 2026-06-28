@@ -20,7 +20,7 @@ export default function BetaGate({ onUnlock }: { onUnlock: () => void }) {
 
   // Waitlist State
   const [email, setEmail] = useState("");
-  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const [waitlistError, setWaitlistError] = useState("");
   const [submittedEmail, setSubmittedEmail] = useState("");
