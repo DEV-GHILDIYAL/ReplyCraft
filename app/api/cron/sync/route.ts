@@ -476,12 +476,16 @@ CRITICAL RULES:
         `;
 
         if (resend) {
-          await resend.emails.send({
-            from: "ReplyDesk Alerts <alerts@replydesk.in>",
-            to: ownerEmail,
-            subject: emailSubject,
-            html: emailHtml,
-          });
+          try {
+            await resend.emails.send({
+              from: "ReplyDesk Alerts <alerts@replydesk.in>",
+              to: ownerEmail,
+              subject: emailSubject,
+              html: emailHtml,
+            });
+          } catch (emailErr) {
+            console.error(`Failed to send email alert for business ${biz.name}:`, emailErr);
+          }
         } else {
         }
       }

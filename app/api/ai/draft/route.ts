@@ -179,11 +179,12 @@ export async function POST(request: Request) {
         Respond ONLY with the text of the draft response. No headers, introductory phrases, or signatures like "[Your Name]". Just write the reply.
       `;
 
-      const response = await groq.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: `You are a customer service assistant writing draft responses to reviews for the business: "${businessName}". 
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: `You are a customer service assistant writing draft responses to reviews for the business: "${businessName}". 
 Output ONLY the final response text.
 
 CRITICAL RULES:
@@ -194,17 +195,26 @@ CRITICAL RULES:
    - Instead of phone number: say "reach out to us directly" or "call us directly"
 3. Ensure the response is completely self-contained, warm, professional, and ready to be published as-is without any editing needed.
 4. Keep the response concise (maximum 120 words) and maintain the requested tone.`
-          },
-          { role: "user", content: prompt },
-        ],
-        model: "llama-3.1-8b-instant",
-      });
+            },
+            { role: "user", content: prompt },
+          ],
+          model: "llama-3.1-8b-instant",
+        });
 
-      draftText = response.choices[0]?.message?.content?.trim() || "";
+        draftText = response.choices[0]?.message?.content?.trim() || "";
 
-      // Cleanup response formatting issues (quotes, etc.)
-      if (draftText.startsWith('"') && draftText.endsWith('"')) {
-        draftText = draftText.slice(1, -1);
+        // Cleanup response formatting issues (quotes, etc.)
+        if (draftText.startsWith('"') && draftText.endsWith('"')) {
+          draftText = draftText.slice(1, -1);
+        }
+      } catch (err) {
+        console.error("Groq API failed, falling back to heuristics:", err);
+        draftText = generateDraftHeuristically(
+          review.review_text || "",
+          review.rating || 5,
+          tone as Tone,
+          review.reviewer_name
+        );
       }
     }
 

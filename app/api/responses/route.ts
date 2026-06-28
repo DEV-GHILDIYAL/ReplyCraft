@@ -32,7 +32,8 @@ export async function GET() {
       .from("response_drafts")
       .select("*, reviews(*), businesses(auto_reply_enabled, auto_reply_schedule)")
       .eq("business_id", business.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (draftsError) {
       throw draftsError;
