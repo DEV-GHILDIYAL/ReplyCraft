@@ -258,3 +258,13 @@ CREATE POLICY "Users can view own notifications" ON notifications
 
 CREATE POLICY "Service role full access to notifications" ON notifications
   FOR ALL USING (auth.role() = 'service_role');
+
+-- ============================================
+-- WAITLIST
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS waitlist (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);

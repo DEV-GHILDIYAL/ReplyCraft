@@ -5,6 +5,7 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import Platforms from "@/components/landing/Platforms";
 import Pricing from "@/components/landing/Pricing";
 import Footer from "@/components/landing/Footer";
+import BetaAccessManager from "@/components/landing/BetaAccessManager";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
@@ -36,16 +37,18 @@ export default async function LandingPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-rc-bg">
-      <Navbar />
-      <BetaBanner />
-      <main>
-        <Hero />
-        <HowItWorks />
-        <Platforms />
-        <Pricing />
-      </main>
-      <Footer />
-    </div>
+    <BetaAccessManager>
+      <div className="min-h-screen bg-rc-bg">
+        <Navbar />
+        <BetaBanner />
+        <main>
+          <Hero />
+          <HowItWorks />
+          <Platforms />
+          <Pricing />
+        </main>
+        <Footer />
+      </div>
+    </BetaAccessManager>
   );
 }
