@@ -1,6 +1,10 @@
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
+export const metadata = {
+  title: "Terms of Service | ReplyDesk",
+  description: "Read the terms and conditions for using ReplyDesk's AI-powered review management platform.",
+};
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-rc-bg flex flex-col justify-between">

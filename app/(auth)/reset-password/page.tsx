@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -14,28 +15,12 @@ export default function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get("access_token");
-    const type = hashParams.get("type");
-    
-    if (accessToken && type === "recovery") {
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: hashParams.get("refresh_token") || "",
-      }).then(({ error }) => {
-        if (error) {
-          setError("Invalid or expired reset link. Please request a new one.");
-          router.push("/forgot-password");
-        }
-      });
-    } else {
-      // No recovery token found
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
-          router.push("/forgot-password");
-        }
-      });
-    }
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error || !session) {
+        toast.error("Invalid or expired reset link. Please request a new one.");
+        router.push("/forgot-password");
+      }
+    });
   }, [supabase, router]);
 
   async function handleSubmit(e: React.FormEvent) {

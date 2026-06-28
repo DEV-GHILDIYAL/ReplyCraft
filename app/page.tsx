@@ -8,6 +8,10 @@ import Footer from "@/components/landing/Footer";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
+export const metadata = {
+  title: "ReplyDesk - AI Review Management for Indian Businesses",
+  description: "Automatically respond to Google, Facebook, and Yelp reviews using AI. Save time and grow your reputation with ReplyDesk.",
+};
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }

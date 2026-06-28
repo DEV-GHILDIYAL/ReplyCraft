@@ -49,9 +49,7 @@ export async function GET(request: Request) {
     if (!isMock) {
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-      const redirectUri = process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/platforms/google/callback`
-        : 'http://localhost:3000/api/platforms/google/callback';
+      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/platforms/google/callback`;
 
       try {
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -73,6 +71,8 @@ export async function GET(request: Request) {
         refreshToken = tokens.refresh_token || "";
         const expiresIn = tokens.expires_in || 3600;
         expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+        console.error("[GBP Debug] Access token present:", accessToken ? "YES" : "NO", "Token length:", accessToken?.length);
 
         // Fetch Google My Business Accounts
         const accountsRes = await fetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", {
@@ -134,8 +134,14 @@ export async function GET(request: Request) {
                   primary_category: mappedCat
                 });
               }
+            } else {
+              const errorText = await locationsRes.text();
+              console.error("[GBP Debug] Locations API failed - Status:", locationsRes.status, "Error:", errorText);
             }
           }
+        } else {
+          const errorText = await accountsRes.text();
+          console.error("[GBP Debug] Accounts API failed - Status:", accountsRes.status, "Error:", errorText);
         }
       } catch (err) {
         console.error("Failed to fetch verified GMB locations:", err);
@@ -192,5 +198,5 @@ export async function GET(request: Request) {
 }
 
 function requestUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_APP_URL!;
 }

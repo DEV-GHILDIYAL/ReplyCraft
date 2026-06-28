@@ -1,6 +1,10 @@
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
+export const metadata = {
+  title: "Privacy Policy | ReplyDesk",
+  description: "Learn how ReplyDesk collects, uses, and protects your business and review data.",
+};
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-rc-bg flex flex-col justify-between">

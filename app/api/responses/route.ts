@@ -61,7 +61,7 @@ async function refreshGoogleAccessToken(platform: any, supabase: any) {
     return platform.access_token;
   }
 
-  console.log(`Refreshing expired Google access token for business platform: ${platform.id}`);
+
   try {
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -234,7 +234,7 @@ export async function POST(request: Request) {
             const isMock = platform.access_token?.startsWith("mock_") || platform.place_id?.startsWith("mock_") || review.platform_review_id.includes("mock_");
 
             if (isMock) {
-              console.log("[Google Publish Simulation] Mock mode active. Simulated publishing response to Google.");
+
             } else {
               const accessToken = await refreshGoogleAccessToken(platform, supabase);
               let reviewIdSegment = review.platform_review_id;
@@ -258,7 +258,7 @@ export async function POST(request: Request) {
                 console.error(`Google API reply publication failed: ${gmbRes.status} ${errText}`);
                 throw new Error(`Failed to publish response to Google Business Profile: ${errText}`);
               }
-              console.log(`Successfully published response to Google Business Profile review: ${reviewIdSegment}`);
+
             }
           }
         }

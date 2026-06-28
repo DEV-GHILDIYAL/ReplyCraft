@@ -135,7 +135,7 @@ export async function GET(request: Request) {
     for (const biz of businesses) {
       // 1. Quota & Trial Check
       if (biz.plan === "trial" && isTrialExpired(biz.trial_started_at)) {
-        console.log(`Skipping sync for business ${biz.name} - trial expired`);
+
         continue;
       }
 
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
               })
               .eq("id", draft.review_id);
           }
-          console.log(`Published ${approvedDrafts.length} scheduled drafts for business: ${biz.name}`);
+
         }
       }
 
@@ -215,7 +215,7 @@ export async function GET(request: Request) {
         }
 
         if (currentUsed >= limit) {
-          console.log(`Skipping sync for business ${biz.name} - draft limit reached (${currentUsed}/${limit})`);
+
           continue;
         }
       }
@@ -242,7 +242,7 @@ export async function GET(request: Request) {
       for (const review of unprocessed) {
         // Enforce quota limit inside loop if not on trial
         if (biz.plan !== "trial" && currentUsed >= limit) {
-          console.log(`Business ${biz.name} reached quota limit during cron processing`);
+
           break;
         }
 
@@ -429,7 +429,7 @@ CRITICAL RULES:
       const ownerEmail = authUser?.user?.email;
 
       if (ownerEmail) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
         const emailSubject = `ReplyDesk: ${processedCount} new reviews need your attention`;
         const emailHtml = `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #0a0f1e; color: #f1f5f9; border-radius: 12px; border: 1px solid #1e293b;">
@@ -483,9 +483,6 @@ CRITICAL RULES:
             html: emailHtml,
           });
         } else {
-          console.log(`[Resend Email Simulation] Sent email notification to ${ownerEmail}:`);
-          console.log(`Subject: ${emailSubject}`);
-          console.log(`Summary: Total ${processedCount} (Pos: ${positiveCount}, Neg: ${negativeCount})`);
         }
       }
 
