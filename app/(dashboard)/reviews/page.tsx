@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -223,76 +222,10 @@ export default function ReviewsPage() {
   const [page, setPage] = useState(1);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (searchParams.get("addManual") === "true") {
-      setIsAddModalOpen(true);
-    }
-  }, [searchParams]);
-
   // Reset page to 1 when any filter changes
   useEffect(() => {
     setPage(1);
   }, [platform, rating, status, search]);
-
-  // Manual review form states
-  const [manualName, setManualName] = useState("");
-  const [manualRating, setManualRating] = useState(5);
-  const [manualPlatform, setManualPlatform] = useState("google");
-  const [manualText, setManualText] = useState("");
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
-  const [addingReview, setAddingReview] = useState(false);
-
-  const resetManualForm = () => {
-    setManualName("");
-    setManualRating(5);
-    setManualPlatform("google");
-    setManualText("");
-    setManualDate(new Date().toISOString().split("T")[0]);
-  };
-
-  const handleAddManualReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualName.trim() || !manualText.trim()) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-    setAddingReview(true);
-    const toastId = toast.loading("Adding review & generating AI response...");
-    try {
-      const response = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create",
-          reviewerName: manualName,
-          rating: manualRating,
-          platform: manualPlatform,
-          reviewText: manualText,
-          reviewDate: manualDate,
-        }),
-      });
-
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.error || "Failed to create manual review");
-
-      toast.success(
-        resData.autoPublished
-          ? "Review added & AI draft auto-published!"
-          : "Review added & AI draft generated",
-        { id: toastId }
-      );
-      resetManualForm();
-      setIsAddModalOpen(false);
-      mutate(); // Refresh the list
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add manual review.", { id: toastId });
-    } finally {
-      setAddingReview(false);
-    }
-  };
 
   const queryUrl = `/api/reviews?platform=${platform}&rating=${rating}&status=${status}&page=${page}&limit=20`;
   const { data: responseData, error, isLoading, mutate } = useSWR(queryUrl, fetcher);
@@ -345,19 +278,6 @@ export default function ReviewsPage() {
             Browse reviews across all connected channels and generate replies.
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (hasNoBusiness) {
-              toast.error("Please connect your Google Business Profile on Platforms page first.");
-              return;
-            }
-            setIsAddModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 shadow-lg shadow-rc-accent/15 cursor-pointer shrink-0 font-bold"
-        >
-          <Sparkles className="h-4 w-4" />
-          Add Review Manually
-        </button>
       </div>
 
       {/* Filter Toolbar */}
@@ -512,148 +432,6 @@ export default function ReviewsPage() {
           onClose={() => setSelectedReview(null)}
           onSuccess={mutate}
         />
-      )}
-
-      {/* Add Manual Review Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-rc-bg/85 backdrop-blur-md p-4 overflow-y-auto animate-fade-in">
-          <div className="w-full max-w-lg bg-rc-card border border-rc-border rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-rc-border">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-rc-accent" />
-                <h2 className="text-lg font-bold text-rc-text">Add Review Manually</h2>
-              </div>
-              <button
-                onClick={() => {
-                  resetManualForm();
-                  setIsAddModalOpen(false);
-                }}
-                className="p-1 rounded-lg text-rc-muted hover:text-rc-text hover:bg-rc-border transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleAddManualReview} className="flex-1 p-6 space-y-5 overflow-y-auto">
-              {/* Reviewer Name */}
-              <div>
-                <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-1.5">
-                  Reviewer Name *
-                </label>
-                <input
-                  type="text"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl bg-rc-bg border border-rc-border text-rc-text placeholder-rc-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-rc-accent/30 focus:border-rc-accent/50 transition-all"
-                />
-              </div>
-
-              {/* Rating Star Selector */}
-              <div>
-                <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-2">
-                  Rating *
-                </label>
-                <div className="flex gap-1">
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setManualRating(idx + 1)}
-                      className="text-2xl hover:scale-110 transition-transform cursor-pointer focus:outline-none"
-                    >
-                      <span className={idx < manualRating ? "text-yellow-400" : "text-rc-border"}>
-                        ★
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Platform dropdown & Date Picker */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Platform */}
-                <div>
-                  <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-1.5">
-                    Platform *
-                  </label>
-                  <select
-                    value={manualPlatform}
-                    onChange={(e) => setManualPlatform(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-rc-bg border border-rc-border text-rc-text text-sm focus:outline-none focus:ring-2 focus:ring-rc-accent/30 focus:border-rc-accent/50 transition-all cursor-pointer"
-                  >
-                    <option value="google">Google</option>
-                    <option value="yelp">Yelp</option>
-                    <option value="facebook">Facebook</option>
-                    <option value="trustpilot">Trustpilot</option>
-                    <option value="g2">G2</option>
-                  </select>
-                </div>
-
-                {/* Date */}
-                <div>
-                  <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-1.5">
-                    Review Date
-                  </label>
-                  <input
-                    type="date"
-                    value={manualDate}
-                    onChange={(e) => setManualDate(e.target.value)}
-                    max={new Date().toISOString().split("T")[0]}
-                    className="w-full px-4 py-2 rounded-xl bg-rc-bg border border-rc-border text-rc-text text-sm focus:outline-none focus:ring-2 focus:ring-rc-accent/30 focus:border-rc-accent/50 transition-all cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Review Text */}
-              <div>
-                <label className="block text-xs font-bold text-rc-muted uppercase tracking-wider mb-1.5">
-                  Review Text *
-                </label>
-                <textarea
-                  value={manualText}
-                  onChange={(e) => setManualText(e.target.value)}
-                  placeholder="Paste the customer's review comments here..."
-                  required
-                  rows={4}
-                  className="w-full p-4 rounded-xl bg-rc-bg border border-rc-border text-rc-text placeholder-rc-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-rc-accent/30 focus:border-rc-accent/50 transition-all resize-none animate-fade-in"
-                />
-              </div>
-
-              {/* Action buttons */}
-              <div className="pt-4 border-t border-rc-border flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetManualForm();
-                    setIsAddModalOpen(false);
-                  }}
-                  className="px-5 py-2.5 rounded-xl border border-rc-border text-rc-text text-sm font-medium hover:bg-rc-bg transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addingReview}
-                  className="px-6 py-2.5 rounded-xl bg-rc-accent text-rc-bg font-bold text-sm hover:bg-rc-accent-hover transition-all duration-200 disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-rc-accent/10 cursor-pointer font-bold"
-                >
-                  {addingReview ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" /> Adding...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" /> Save Review
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );
