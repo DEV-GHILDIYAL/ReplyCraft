@@ -151,9 +151,11 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 49900,
     priceDisplay: "₹499",
     features: [
-      "All features",
+      "1 business location",
+      "Google Reviews",
       "50 AI replies/month",
-      "Auto-publish replies",
+      "Sentiment dashboard",
+      "Email support",
     ],
     limits: {
       locations: 1,
@@ -166,9 +168,11 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     price: 99900,
     priceDisplay: "₹999",
     features: [
-      "All features",
+      "3 business locations",
+      "Google + Facebook + Yelp",
       "200 AI replies/month",
-      "Auto-publish replies",
+      "Advanced sentiment analytics",
+      "Priority support",
     ],
     limits: {
       locations: 3,
@@ -178,12 +182,14 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   },
   scale: {
     name: "Scale",
-    price: 249900,
-    priceDisplay: "₹2,499",
+    price: 200000,
+    priceDisplay: "₹2,000",
     features: [
-      "All features",
+      "10 business locations",
+      "All platforms",
       "1000 AI replies/month",
-      "Auto-publish replies",
+      "Dedicated support",
+      "More platforms coming soon",
     ],
     limits: {
       locations: 10,
