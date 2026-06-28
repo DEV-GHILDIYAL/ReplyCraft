@@ -40,7 +40,7 @@ export default function Pricing() {
       features: [
         "10 business locations",
         "All platforms",
-        "1000 AI replies/month",
+        "750 AI replies/month",
         "Dedicated support",
         "More platforms coming soon",
       ],

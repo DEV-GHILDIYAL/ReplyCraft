@@ -2,7 +2,7 @@ export const PLANS = {
   trial:   { name: 'Free Trial', drafts: Infinity, durationDays: 7 },
   starter: { name: 'Starter',   drafts: 50,       price: 499 },
   growth:  { name: 'Growth',    drafts: 200,       price: 999 },
-  scale:   { name: 'Scale',     drafts: 1000,      price: 2000 },
+  scale:   { name: 'Scale',     drafts: 750,      price: 2000 },
 }
 
 export function isTrialExpired(trialStartedAt: string): boolean {

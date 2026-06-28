@@ -187,14 +187,14 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     features: [
       "10 business locations",
       "All platforms",
-      "1000 AI replies/month",
+      "750 AI replies/month",
       "Dedicated support",
       "More platforms coming soon",
     ],
     limits: {
       locations: 10,
       platforms: "unlimited",
-      responsesPerMonth: 1000,
+      responsesPerMonth: 750,
     },
   },
 };
